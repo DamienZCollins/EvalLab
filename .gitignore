@@ -38,3 +38,7 @@ application-secret.yml
 # ---- 系统文件 ----
 .DS_Store
 Thumbs.db
+
+# ---- 运行日志（本地验证用）----
+evallab-server.log
+evallab-agent.log
