@@ -2,7 +2,7 @@
 
 独立的 Agent 离线评测平台：从 Trace 采集到回归门禁的完整闭环。
 
-> 当前进度：阶段 0（仓库与环境）。业务代码从阶段 1 开始。
+> 当前进度：阶段 1（Spring Boot 骨架 + Trace 契约）。可启动、可接收 Trace、接口文档可访问。
 
 ## 核心能力（规划）
 
@@ -31,12 +31,18 @@
 
 ```text
 EvalLab/
-├── docker/                  # 本地中间件：docker-compose.yml + MySQL 初始化
-├── docs/                    # 方案、开发路径、编码约定
-├── evallab-server/          # 后端服务（阶段 1 起）
-│   └── src/main/resources/  # 统一配置：application.yml / -dev / -example
+├── evallab-contract/        # Trace 接入契约：平台与 Agent 共用的数据模型，无框架依赖
+├── evallab-server/          # 后端服务
+│   └── src/main/
+│       ├── java/com/evallab/
+│       │   ├── api/         # REST 接口层：common / trace
+│       │   ├── core/        # 核心领域逻辑：trace
+│       │   └── infra/       # 基础设施：db（MyBatis-Plus + Flyway）
+│       └── resources/       # 配置与 db/migration 迁移脚本
+├── evallab-agent-demo/      # 故障注入 Agent（阶段 1），Web 搜索 Agent 于阶段 5 加入
 ├── evallab-web/             # 前端（阶段 2 起）
-├── evallab-agent-demo/      # 示例 Agent：故障注入 / Web 搜索（阶段 1、5）
+├── docker/                  # 本地中间件：docker-compose.yml + MySQL 初始化
+├── docs/                    # 方案、开发路径、设计决策、Trace 契约、编码约定
 ├── .env.example             # 服务端环境变量模板
 └── README.md
 ```
@@ -67,20 +73,36 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env ps
 cp .env.example .env
 ```
 
-编辑 `.env`，数据库密码与 `docker/.env` 保持一致。启动服务前导出（阶段 1 起可运行）：
+编辑 `.env`，数据库密码与 `docker/.env` 保持一致。启动服务前导出：
 
 ```bash
 set -a && source .env && set +a
 ```
 
-### 3. 启动服务（阶段 1 起）
+### 3. 构建并启动服务
 
 ```bash
-cd evallab-server && mvn spring-boot:run
+mvn -DskipTests package
 ```
+
+```bash
+java -jar evallab-server/target/evallab-server-0.1.0-SNAPSHOT.jar
+```
+
+首次启动时 Flyway 自动建表（`eval_trace`、`eval_span`）。
 
 - 健康检查：`http://localhost:8080/actuator/health`
 - 接口文档：`http://localhost:8080/swagger-ui.html`
+- Trace 上报：`POST http://localhost:8080/api/trace`
+- Trace 查询：`GET http://localhost:8080/api/trace/{traceId}`
+
+### 4. 启动故障注入 Agent
+
+```bash
+java -jar evallab-agent-demo/target/fault-injection-agent.jar
+```
+
+默认监听 `8081`，暴露 `POST /execute`，并在启动后自动向平台上报 1 个正常 Trace 和 5 个故障 Trace（`EVALLAB_SELF_REPORT=false` 可关闭）。契约见 [TRACE_CONTRACT.md](docs/TRACE_CONTRACT.md)。
 
 ### 停止 / 清理
 
