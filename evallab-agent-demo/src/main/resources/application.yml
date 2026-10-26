@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: fault-injection-agent
+
+server:
+  port: ${EVALLAB_AGENT_PORT:8081}
+
+evallab:
+  agent:
+    name: fault-injection-agent
+    # TIMEOUT 故障下阻塞多久；设得比平台超时略长才能触发平台侧超时
+    timeout-delay: ${EVALLAB_AGENT_TIMEOUT_DELAY:65s}
+  self-report:
+    enabled: ${EVALLAB_SELF_REPORT:true}
+    platform-url: ${EVALLAB_PLATFORM_URL:http://localhost:8080}
+
+logging:
+  level:
+    root: info
