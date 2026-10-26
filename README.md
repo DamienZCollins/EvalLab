@@ -90,6 +90,14 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
 
 数据卷 `evallab_mysql-data` 保留；需彻底清库时追加 `-v`。
 
+## 常见问题
+
+- **Docker Desktop 启动报 `initializing Secrets Engine ... engine.sock ... The file cannot be accessed by the system`**
+  `%LOCALAPPDATA%\docker-secrets-engine\engine.sock` 是残留的悬空符号链接，普通 `rm` / `Remove-Item` 无法删除。
+  退出 Docker Desktop 后把整个 `docker-secrets-engine` 目录重命名，再启动即可（Docker 会重建）。
+- **容器 healthy 但宿主机连不上 3306**
+  WSL 端口转发未建立。执行 `wsl --shutdown`，重启 Docker Desktop 后重新 `up -d`。
+
 ## 配置约定
 
 - 连接信息一律走环境变量，代码与配置文件中不出现明文密码
