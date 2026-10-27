@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: web-search-agent
+
+server:
+  # 8082 常被本地其他服务占用，默认用 8083；宿主机映射同名端口，见 docker-compose
+  port: ${EVALLAB_WEBSEARCH_AGENT_PORT:8083}
+
+evallab:
+  websearch:
+    name: web-search-agent
+    # 每次搜索抓取前 N 篇正文，上限 3；影响工具序列长度与 P95 耗时
+    top-k: ${EVALLAB_WEBSEARCH_TOP_K:1}
+
+logging:
+  level:
+    root: info
