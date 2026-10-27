@@ -25,5 +25,59 @@ services:
       retries: 20
       start_period: 30s
 
+  server:
+    build:
+      context: ..
+      dockerfile: evallab-server/Dockerfile
+    image: evallab/server:0.1.0
+    container_name: evallab-server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EVALLAB_DB_HOST: mysql
+      EVALLAB_DB_PORT: 3306
+      EVALLAB_DB_NAME: ${MYSQL_DATABASE:-evallab}
+      EVALLAB_DB_USERNAME: root
+      EVALLAB_DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # 容器内直连服务名，覆盖 application.yml 里的 localhost 默认值
+      EVALLAB_FAULT_AGENT_URL: http://agent:8081
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+
+  agent:
+    build:
+      context: ..
+      dockerfile: evallab-agent-demo/Dockerfile
+    image: evallab/agent-demo:0.1.0
+    container_name: evallab-agent
+    restart: unless-stopped
+    # JRE 镜像无 curl，server 不设 healthcheck；自检上报失败只告警，不影响 Agent 启动
+    depends_on:
+      server:
+        condition: service_started
+    environment:
+      # 自检上报（补充路径），失败仅告警不影响启动
+      EVALLAB_PLATFORM_URL: http://server:8080
+      # 比平台侧 90s 超时短、比正常流程长，既能触发 TIMEOUT 又不会拖慢整轮评测太久
+      EVALLAB_AGENT_TIMEOUT_DELAY: ${AGENT_TIMEOUT_DELAY:-65s}
+    ports:
+      - "${AGENT_PORT:-8081}:8081"
+
+  web:
+    build:
+      context: ../evallab-web
+      dockerfile: Dockerfile
+    image: evallab/web:0.1.0
+    container_name: evallab-web
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_started
+    ports:
+      - "${WEB_PORT:-5173}:80"
+
 volumes:
   mysql-data:

@@ -1,0 +1,9 @@
+# 构建上下文是仓库根目录，排除与本镜像无关/体积大的内容
+.git
+.idea
+*.log
+**/target
+evallab-web/node_modules
+evallab-web/dist
+docs
+.env
