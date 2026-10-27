@@ -10,22 +10,25 @@ import java.util.List;
 /**
  * 评分与判定编排：收集各评分器结果，按 D2 聚合出 PASS/FAIL。
  *
- * <p>PASS ⇔ 所有已启用的判定型评分器都达到阈值；Judge 当前未接入（阶段 3）。
+ * <p>PASS ⇔ 所有已启用的判定型评分器都达到阈值；Judge 是参考型，只入结果不参与判定。
  */
 public class ScoringPipeline {
 
     private final RuleScorer ruleScorer;
     private final ToolScorer toolScorer;
+    private final JudgeScorer judgeScorer;
 
-    public ScoringPipeline(RuleScorer ruleScorer, ToolScorer toolScorer) {
+    public ScoringPipeline(RuleScorer ruleScorer, ToolScorer toolScorer, JudgeScorer judgeScorer) {
         this.ruleScorer = ruleScorer;
         this.toolScorer = toolScorer;
+        this.judgeScorer = judgeScorer;
     }
 
     public Verdict score(TestCase testCase, AgentOutput agentOutput) {
         List<ScoreRecord> records = new ArrayList<>();
         addIfPresent(records, ruleScorer.score(testCase, agentOutput));
         addIfPresent(records, toolScorer.score(testCase, agentOutput));
+        addIfPresent(records, judgeScorer.score(testCase, agentOutput));
         return Verdict.of(records);
     }
 
@@ -39,9 +42,12 @@ public class ScoringPipeline {
      * @param passed        判定结果
      * @param failureReason 第一个未通过评分器的理由；通过时为 null
      * @param avgScore      全部评分记录的算术均值；无评分为 null
+     * @param rulePassed    规则评分是否通过；该用例无规则评分器时为 null（供归因使用）
+     * @param toolScore     工具评分；该用例无工具评分器时为 null（供归因使用）
      */
     public record Verdict(boolean passed, String failureReason, BigDecimal avgScore,
-                          List<ScoreRecord> records) {
+                          List<ScoreRecord> records, Boolean rulePassed, Double toolScore,
+                          Double toolThreshold) {
 
         public static Verdict of(List<ScoreRecord> records) {
             List<ScoreRecord> judging = records.stream()
@@ -54,9 +60,17 @@ public class ScoringPipeline {
             BigDecimal avg = records.isEmpty() ? null
                     : records.stream().map(ScoreRecord::score).reduce(BigDecimal.ZERO, BigDecimal::add)
                     .divide(BigDecimal.valueOf(records.size()), 4, RoundingMode.HALF_UP);
+            Boolean rulePassed = find(records, ScorerType.RULE).map(ScoreRecord::passed).orElse(null);
+            ScoreRecord tool = find(records, ScorerType.TOOL_CORRECTNESS).orElse(null);
             return new Verdict(firstFailed == null,
                     firstFailed == null ? null : firstFailed.reason(),
-                    avg, List.copyOf(records));
+                    avg, List.copyOf(records), rulePassed,
+                    tool == null ? null : tool.score().doubleValue(),
+                    tool == null || tool.threshold() == null ? null : tool.threshold().doubleValue());
+        }
+
+        private static java.util.Optional<ScoreRecord> find(List<ScoreRecord> records, ScorerType type) {
+            return records.stream().filter(r -> r.scorerType() == type).findFirst();
         }
     }
 }

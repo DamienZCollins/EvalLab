@@ -1,5 +1,6 @@
 package com.evallab;
 
+import com.evallab.core.scorer.JudgeScorer;
 import com.evallab.core.scorer.RuleScorer;
 import com.evallab.core.scorer.ScoringPipeline;
 import com.evallab.core.scorer.ToolScorer;
@@ -20,8 +21,9 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class ApiLayerConfig {
 
     @Bean
-    public ScoringPipeline scoringPipeline(RuleScorer ruleScorer, ToolScorer toolScorer) {
-        return new ScoringPipeline(ruleScorer, toolScorer);
+    public ScoringPipeline scoringPipeline(RuleScorer ruleScorer, ToolScorer toolScorer,
+                                           JudgeScorer judgeScorer) {
+        return new ScoringPipeline(ruleScorer, toolScorer, judgeScorer);
     }
 
     @Bean

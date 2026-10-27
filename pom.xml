@@ -32,10 +32,18 @@
         <springdoc.version>2.8.13</springdoc.version>
         <flyway.version>11.8.2</flyway.version>
         <json-schema-validator.version>1.5.9</json-schema-validator.version>
+        <spring-ai.version>1.1.0</spring-ai.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>com.evallab</groupId>
                 <artifactId>evallab-contract</artifactId>

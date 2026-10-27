@@ -4,6 +4,7 @@ import com.evallab.core.testcase.MatchType;
 import com.evallab.core.testcase.TestCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -110,7 +111,7 @@ class ScorerTest {
 
     @Test
     void pipelineRequiresAllJudgingScorersToPass() {
-        ScoringPipeline pipeline = new ScoringPipeline(ruleScorer, toolScorer);
+        ScoringPipeline pipeline = new ScoringPipeline(ruleScorer, toolScorer, judgeScorer());
         TestCase testCase = testCase(MatchType.EXACT, "expected", List.of("a", "b"));
 
         ScoringPipeline.Verdict verdict = pipeline.score(testCase,
@@ -122,6 +123,11 @@ class ScorerTest {
                 new AgentOutput("wrong", List.of("b", "a")));
         assertThat(failed.passed()).isFalse();
         assertThat(failed.failureReason()).isEqualTo("输出与期望不一致");
+    }
+
+    /** 空 BeanFactory 里取不到 JudgeModel，等价于「未配置 LLM」。 */
+    private static JudgeScorer judgeScorer() {
+        return new JudgeScorer(new DefaultListableBeanFactory().getBeanProvider(JudgeModel.class));
     }
 
     private static TestCase testCase(MatchType type, String expectedOutput, List<String> expectedTools) {
