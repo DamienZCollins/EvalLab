@@ -57,7 +57,7 @@ HTTP 200，`Content-Type: application/json`，body 为完整 `TraceReport`（见
 
 | 情形 | 处理 |
 |------|------|
-| 超时（默认 60s） | 该用例 FAIL，归因「数据/环境问题」 |
+| 超时（按 `evallab.agent.registry.<name>.timeout` 配置，默认 60s） | 该用例 FAIL，归因「数据/环境问题」 |
 | 连接失败 | 该用例 FAIL，归因「数据/环境问题」 |
 | HTTP 非 2xx / body 不合契约 | 该用例 FAIL，归因 `UNKNOWN` |
 | 返回的 `trace_id` 已存在 | 该用例 FAIL，归因 `UNKNOWN` |
@@ -71,7 +71,7 @@ HTTP 200，`Content-Type: application/json`，body 为完整 `TraceReport`（见
 `POST /api/trace`，body 为完整 `TraceReport`（见第 4 节）。
 
 ```json
-{"code":0,"message":"ok","data":{"traceId":"...","duplicated":false}}
+{"code":0,"message":"ok","data":{"trace_id":"...","duplicated":false}}
 ```
 
 - `trace_id` 是幂等键：已存在时不覆盖、不合并，返回 `duplicated: true`。
@@ -146,13 +146,13 @@ java -jar agents/demo/target/fault-injection-agent.jar
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
 | `EVALLAB_AGENT_PORT` | `8081` | 监听端口 |
-| `EVALLAB_AGENT_TIMEOUT_DELAY` | `65s` | `TIMEOUT` 故障阻塞时长，需大于平台超时 |
+| `EVALLAB_AGENT_TIMEOUT_DELAY` | `65s` | `TIMEOUT` 故障阻塞时长，需大于平台超时（故障注入 Agent 用默认 60s 超时；Web 搜索 Agent 在 `application.yml` 中放宽到 90s） |
 | `EVALLAB_SELF_REPORT` | `true` | 启动后自动上报 1 个正常 + 5 个故障 Trace |
 | `EVALLAB_PLATFORM_URL` | `http://localhost:8080` | 自检上报地址 |
 
 ### 模拟工作流
 
-固定两步工具链，便于确定性归因：
+固定工具链（规划 + 三步工具，逐层嵌套），便于确定性归因：
 
 ```text
 LLM_CALL(规划)
