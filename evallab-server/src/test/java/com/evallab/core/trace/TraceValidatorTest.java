@@ -31,6 +31,32 @@ class TraceValidatorTest {
     }
 
     @Test
+    void rejectsEmptySpanList() {
+        TraceReport report = report(List.of());
+
+        assertThat(TraceValidator.validate(report)).contains("spans 不能为空");
+    }
+
+    @Test
+    void rejectsOverlongIdentifiers() {
+        TraceReport report = new TraceReport("t".repeat(65), "a".repeat(129),
+                TraceStatus.SUCCESS, "o", 0, 0L, List.of(span("s".repeat(65), null, SpanType.LLM_CALL, null)));
+
+        assertThat(TraceValidator.validate(report))
+                .contains("trace_id 超过最大长度 64: 65",
+                        "agent_name 超过最大长度 128: 129",
+                        "spans[0].span_id 超过最大长度 64: 65");
+    }
+
+    @Test
+    void rejectsOverlongToolName() {
+        TraceReport report = report(List.of(span("a", null, SpanType.TOOL_CALL, "x".repeat(129))));
+
+        assertThat(TraceValidator.validate(report))
+                .contains("spans[0].tool_name 超过最大长度 128: 129");
+    }
+
+    @Test
     void rejectsToolCallWithoutToolName() {
         TraceReport report = report(List.of(span("a", null, SpanType.TOOL_CALL, null)));
 

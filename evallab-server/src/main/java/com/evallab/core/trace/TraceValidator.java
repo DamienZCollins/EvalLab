@@ -18,6 +18,10 @@ import java.util.Set;
 public final class TraceValidator {
 
     private static final int MAX_SPANS = 1000;
+    private static final int MAX_TRACE_ID = 64;
+    private static final int MAX_AGENT_NAME = 128;
+    private static final int MAX_SPAN_ID = 64;
+    private static final int MAX_TOOL_NAME = 128;
 
     private TraceValidator() {
     }
@@ -32,10 +36,16 @@ public final class TraceValidator {
         }
         requireText(report.traceId(), "trace_id", violations);
         requireText(report.agentName(), "agent_name", violations);
+        requireMaxLength(report.traceId(), "trace_id", MAX_TRACE_ID, violations);
+        requireMaxLength(report.agentName(), "agent_name", MAX_AGENT_NAME, violations);
         if (report.status() == null) {
             violations.add("status 不能为空");
         }
         if (report.spans() == null) {
+            violations.add("spans 不能为空");
+            return violations;
+        }
+        if (report.spans().isEmpty()) {
             violations.add("spans 不能为空");
             return violations;
         }
@@ -58,6 +68,9 @@ public final class TraceValidator {
             if (!requireText(span.spanId(), at + ".span_id", violations)) {
                 continue;
             }
+            requireMaxLength(span.spanId(), at + ".span_id", MAX_SPAN_ID, violations);
+            requireMaxLength(span.parentSpanId(), at + ".parent_span_id", MAX_SPAN_ID, violations);
+            requireMaxLength(span.toolName(), at + ".tool_name", MAX_TOOL_NAME, violations);
             if (!ids.add(span.spanId())) {
                 violations.add(at + ".span_id 重复: " + span.spanId());
             }
@@ -118,6 +131,12 @@ public final class TraceValidator {
             return false;
         }
         return true;
+    }
+
+    private static void requireMaxLength(String value, String field, int max, List<String> violations) {
+        if (value != null && value.length() > max) {
+            violations.add(field + " 超过最大长度 " + max + ": " + value.length());
+        }
     }
 
     private static boolean hasText(String value) {
