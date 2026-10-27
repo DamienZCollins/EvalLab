@@ -4,20 +4,20 @@ WORKDIR /workspace
 
 COPY pom.xml .
 COPY contract/pom.xml contract/
-COPY server/pom.xml server/
-COPY agent-demo/pom.xml agent-demo/
-COPY agent-websearch/pom.xml agent-websearch/
+COPY backend/pom.xml backend/
+COPY agents/demo/pom.xml agents/demo/
+COPY agents/websearch/pom.xml agents/websearch/
 COPY cli/pom.xml cli/
 RUN mvn -B -q dependency:go-offline -DskipTests || true
 
 COPY contract/src contract/src
-COPY agent-demo/src agent-demo/src
-RUN mvn -B -q package -DskipTests -pl agent-demo -am
+COPY agents/websearch/src agents/websearch/src
+RUN mvn -B -q package -DskipTests -pl agents/websearch -am
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 RUN useradd -r -u 10001 evallab
-COPY --from=build /workspace/agent-demo/target/fault-injection-agent.jar app.jar
+COPY --from=build /workspace/agents/websearch/target/web-search-agent.jar app.jar
 USER evallab
-EXPOSE 8081
+EXPOSE 8083
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]

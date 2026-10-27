@@ -1,6 +1,6 @@
 spring:
   application:
-    name: server
+    name: backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:

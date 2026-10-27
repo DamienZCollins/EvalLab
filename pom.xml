@@ -20,9 +20,9 @@
 
     <modules>
         <module>contract</module>
-        <module>server</module>
-        <module>agent-demo</module>
-        <module>agent-websearch</module>
+        <module>backend</module>
+        <module>agents/demo</module>
+        <module>agents/websearch</module>
         <module>cli</module>
     </modules>
 

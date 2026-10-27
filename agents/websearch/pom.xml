@@ -8,10 +8,13 @@
         <groupId>com.evallab</groupId>
         <artifactId>evallab</artifactId>
         <version>0.1.0-SNAPSHOT</version>
+        <!-- 模块嵌了一层目录，默认 ../pom.xml 指向 agents/ 而非仓库根 -->
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>agent-demo</artifactId>
-    <name>agent-demo</name>
+    <artifactId>agent-websearch</artifactId>
+    <name>agent-websearch</name>
+    <description>Web 搜索 Agent 示例：搜索 → 抓取 → 总结，按 Trace 契约上报</description>
 
     <dependencies>
         <dependency>
@@ -30,7 +33,7 @@
     </dependencies>
 
     <build>
-        <finalName>fault-injection-agent</finalName>
+        <finalName>web-search-agent</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
