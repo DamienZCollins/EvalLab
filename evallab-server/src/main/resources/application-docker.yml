@@ -9,3 +9,4 @@ evallab:
     seed-enabled: true
     # Web 搜索用例按分组判断，已有库升级后也会补齐
     websearch-cases-enabled: true
+    redteam-cases-enabled: true
