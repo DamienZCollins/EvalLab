@@ -38,11 +38,21 @@ public class SimulatedWorkflow {
      * @param timeoutDelay TIMEOUT 故障下的阻塞时长，自检上报时传 {@link Duration#ZERO}
      */
     public TraceReport run(ExecuteRequest request, Duration timeoutDelay) {
+        return run(request, timeoutDelay, 0);
+    }
+
+    /**
+     * @param extraDelayMs 退化模式下的额外阻塞时长，同 TIMEOUT 一样计入首个 span
+     */
+    public TraceReport run(ExecuteRequest request, Duration timeoutDelay, long extraDelayMs) {
         FaultInjection fault = request.faultInjection();
         FaultType type = fault == null || fault.type() == null ? null : fault.type();
         Instant started = Instant.now();
         if (type == FaultType.TIMEOUT) {
             sleep(timeoutDelay);
+        }
+        if (extraDelayMs > 0) {
+            sleep(Duration.ofMillis(extraDelayMs));
         }
         // 阻塞时间必须落到某个 span 上，否则 trace 的 duration_ms 与墙钟时间对不上。
         // 语义上就是第一次 LLM 调用迟迟不返回，所以记在首个 LLM_CALL 的耗时里。
