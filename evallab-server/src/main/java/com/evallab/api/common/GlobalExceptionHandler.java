@@ -1,5 +1,6 @@
 package com.evallab.api.common;
 
+import com.evallab.core.baseline.BaselineNotFoundException;
 import com.evallab.core.eval.EvalTaskNotFoundException;
 import com.evallab.core.review.ManualReviewService;
 import com.evallab.core.testcase.InvalidTestCaseException;
@@ -36,7 +37,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({TraceNotFoundException.class, TestCaseNotFoundException.class,
-            EvalTaskNotFoundException.class})
+            EvalTaskNotFoundException.class, BaselineNotFoundException.class})
     public ResponseEntity<Result<Void>> handleNotFound(RuntimeException e) {
         return respond(ErrorCode.NOT_FOUND, e.getMessage());
     }

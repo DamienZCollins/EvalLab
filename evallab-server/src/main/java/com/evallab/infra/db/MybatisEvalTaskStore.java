@@ -87,6 +87,14 @@ public class MybatisEvalTaskStore implements EvalTaskStore {
     }
 
     @Override
+    public void markRegression(long taskId, boolean detected) {
+        EvalTaskEntity update = new EvalTaskEntity();
+        update.setTaskId(taskId);
+        update.setIsRegressionDetected(detected);
+        taskMapper.updateById(update);
+    }
+
+    @Override
     @Transactional
     public EvalResult saveResult(EvalResult result) {
         EvalResultEntity entity = new EvalResultEntity();
@@ -154,6 +162,7 @@ public class MybatisEvalTaskStore implements EvalTaskStore {
                 entity.getPassedCases() == null ? 0 : entity.getPassedCases(),
                 entity.getFailedCases() == null ? 0 : entity.getFailedCases(),
                 entity.getPassRate(), entity.getAvgScore(), entity.getP95DurationMs(),
+                entity.getIsRegressionDetected(),
                 entity.getError(), toInstant(entity.getStartedAt()), toInstant(entity.getCompletedAt()),
                 toInstant(entity.getCreatedAt()));
     }

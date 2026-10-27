@@ -6,7 +6,8 @@ import java.time.Instant;
 /**
  * 评测任务汇总。
  *
- * @param avgScore 各结果平均分的均值（等权对待用例）
+ * @param avgScore            各结果平均分的均值（等权对待用例）
+ * @param isRegressionDetected 回归门禁结论；null 表示未做过门禁检查
  */
 public record EvalTask(
         Long taskId,
@@ -18,6 +19,7 @@ public record EvalTask(
         BigDecimal passRate,
         BigDecimal avgScore,
         Long p95DurationMs,
+        Boolean isRegressionDetected,
         String error,
         Instant startedAt,
         Instant completedAt,

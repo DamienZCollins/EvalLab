@@ -138,6 +138,11 @@ class ManualReviewServiceTest {
         }
 
         @Override
+        public void markRegression(long taskId, boolean detected) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public EvalResult saveResult(EvalResult result) {
             throw new UnsupportedOperationException();
         }

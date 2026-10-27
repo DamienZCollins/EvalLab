@@ -17,6 +17,9 @@ public interface EvalTaskStore {
 
     Optional<EvalTask> findTask(long taskId);
 
+    /** 记录门禁结论；每次执行门禁都覆盖上次结果。 */
+    void markRegression(long taskId, boolean detected);
+
     EvalResult saveResult(EvalResult result);
 
     List<EvalResult> findResults(long taskId);

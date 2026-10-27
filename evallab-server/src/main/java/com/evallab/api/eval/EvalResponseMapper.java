@@ -10,7 +10,7 @@ public class EvalResponseMapper {
     public EvalTaskResponse toResponse(EvalTask task) {
         return new EvalTaskResponse(task.taskId(), task.agentName(), task.status(),
                 task.totalCases(), task.passedCases(), task.failedCases(), task.passRate(),
-                task.avgScore(), task.p95DurationMs(), task.error(),
+                task.avgScore(), task.p95DurationMs(), task.isRegressionDetected(), task.error(),
                 task.startedAt(), task.completedAt(), task.createdAt());
     }
 

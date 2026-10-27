@@ -20,6 +20,7 @@ public class EvalTaskEntity {
     private BigDecimal passRate;
     private BigDecimal avgScore;
     private Long p95DurationMs;
+    private Boolean isRegressionDetected;
     private String error;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
@@ -96,6 +97,14 @@ public class EvalTaskEntity {
 
     public void setP95DurationMs(Long p95DurationMs) {
         this.p95DurationMs = p95DurationMs;
+    }
+
+    public Boolean getIsRegressionDetected() {
+        return isRegressionDetected;
+    }
+
+    public void setIsRegressionDetected(Boolean isRegressionDetected) {
+        this.isRegressionDetected = isRegressionDetected;
     }
 
     public String getError() {
