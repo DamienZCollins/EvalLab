@@ -40,13 +40,17 @@ public class SimulatedWorkflow {
     public TraceReport run(ExecuteRequest request, Duration timeoutDelay) {
         FaultInjection fault = request.faultInjection();
         FaultType type = fault == null || fault.type() == null ? null : fault.type();
+        Instant started = Instant.now();
         if (type == FaultType.TIMEOUT) {
             sleep(timeoutDelay);
         }
+        // 阻塞时间必须落到某个 span 上，否则 trace 的 duration_ms 与墙钟时间对不上。
+        // 语义上就是第一次 LLM 调用迟迟不返回，所以记在首个 LLM_CALL 的耗时里。
+        long blockedMs = Duration.between(started, Instant.now()).toMillis();
 
         String traceId = UUID.randomUUID().toString();
         String planId = UUID.randomUUID().toString();
-        Instant cursor = Instant.now();
+        Instant cursor = started;
         List<SpanDto> spans = new ArrayList<>();
 
         boolean misunderstand = type == FaultType.INPUT_MISUNDERSTAND;
@@ -55,26 +59,35 @@ public class SimulatedWorkflow {
         cursor = addSpan(spans, planId, null, SpanType.LLM_CALL, null,
                 request.input(),
                 misunderstand ? "计划：查询天气" : "计划：搜索 → 提取 → 总结",
-                null, cursor, 120);
+                null, cursor, 120 + blockedMs);
 
         // 逐层嵌套：规划 → 搜索 → 提取 → 总结，验证平台对父子关系的解析
+        // tools 按执行顺序保存，target_span 即此列表下标
+        List<SpanCall> tools = new ArrayList<>();
         SpanCall search = addToolSpan(spans, planId, searchTool, cursor);
+        tools.add(search);
         cursor = search.end();
 
-        SpanCall extract = null;
         String summarizeParent = search.spanId();
         if (type != FaultType.STEP_MISSING) {
-            extract = addToolSpan(spans, search.spanId(), EXTRACT_TOOL, cursor);
+            SpanCall extract = addToolSpan(spans, search.spanId(), EXTRACT_TOOL, cursor);
+            tools.add(extract);
             cursor = extract.end();
             summarizeParent = extract.spanId();
         }
 
-        cursor = addToolSpan(spans, summarizeParent, "summarize", cursor).end();
+        SpanCall summarize = addToolSpan(spans, summarizeParent, "summarize", cursor);
+        tools.add(summarize);
+        cursor = summarize.end();
 
         if (type == FaultType.TOOL_ERROR) {
+            // 越界视为配置错误而非默认回落到第一个工具：静默回落会让归因结果对不上
             int target = resolveTarget(fault, 0);
-            SpanCall broken = target == 1 && extract != null ? extract : search;
-            replaceWithError(spans, broken, "工具调用失败: HTTP 500 Internal Server Error");
+            if (target < 0 || target >= tools.size()) {
+                throw new IllegalArgumentException(
+                        "target_span 越界: " + target + "，本次执行共 " + tools.size() + " 个工具调用");
+            }
+            replaceWithError(spans, tools.get(target), "工具调用失败: HTTP 500 Internal Server Error");
         }
 
         // 曲解指令、输出格式错误时 Agent 自身「执行成功」，错误体现在 output 与工具序列上，
@@ -113,9 +126,9 @@ public class SimulatedWorkflow {
             return fallback;
         }
         try {
-            return Integer.parseInt(fault.targetSpan());
+            return Integer.parseInt(fault.targetSpan().trim());
         } catch (NumberFormatException e) {
-            return fallback;
+            throw new IllegalArgumentException("target_span 不是合法序号: " + fault.targetSpan(), e);
         }
     }
 
