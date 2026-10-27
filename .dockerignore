@@ -3,7 +3,7 @@
 .idea
 *.log
 **/target
-evallab-web/node_modules
-evallab-web/dist
+web/node_modules
+web/dist
 docs
 .env

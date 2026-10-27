@@ -81,7 +81,7 @@ jobs:
         id: gate
         run: |
           # 输出直接进日志；日志里的中文按 UTF-8 写，CLI 内部已固定编码
-          java -jar evallab-cli/target/evallab-cli.jar \
+          java -jar cli/target/cli.jar \
             --task "${{ steps.eval.outputs.task_id }}" \
             --baseline "${{ steps.baseline.outputs.baseline_id }}" \
             --threshold-pass-rate -0.10 \

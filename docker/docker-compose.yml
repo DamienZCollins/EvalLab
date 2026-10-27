@@ -28,7 +28,7 @@ services:
   server:
     build:
       context: ..
-      dockerfile: evallab-server/Dockerfile
+      dockerfile: server/Dockerfile
     image: evallab/server:0.1.0
     container_name: evallab-server
     restart: unless-stopped
@@ -58,7 +58,7 @@ services:
   agent:
     build:
       context: ..
-      dockerfile: evallab-agent-demo/Dockerfile
+      dockerfile: agent-demo/Dockerfile
     image: evallab/agent-demo:0.1.0
     container_name: evallab-agent
     restart: unless-stopped
@@ -77,7 +77,7 @@ services:
   websearch-agent:
     build:
       context: ..
-      dockerfile: evallab-agent-websearch/Dockerfile
+      dockerfile: agent-websearch/Dockerfile
     image: evallab/agent-websearch:0.1.0
     container_name: evallab-websearch-agent
     restart: unless-stopped
@@ -89,7 +89,7 @@ services:
 
   web:
     build:
-      context: ../evallab-web
+      context: ../web
       dockerfile: Dockerfile
     image: evallab/web:0.1.0
     container_name: evallab-web
