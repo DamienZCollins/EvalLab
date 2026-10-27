@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
  * 命令行入口。
  *
  * <pre>
- * java -jar evallab-cli.jar --task 123 --baseline 456 --threshold-pass-rate -0.10
+ * java -jar cli.jar --task 123 --baseline 456 --threshold-pass-rate -0.10
  * </pre>
  *
  * <p>退出码：0 通过；1 检测到回归；2 参数错误或请求失败。CI 里直接 {@code || exit 1} 即可拦截。

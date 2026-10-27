@@ -20,7 +20,7 @@ public record CliArgs(
 ) {
 
     public static final String USAGE = """
-            用法：java -jar evallab-cli.jar --task <task_id> --baseline <baseline_id> [选项]
+            用法：java -jar cli.jar --task <task_id> --baseline <baseline_id> [选项]
 
             必填：
               --task <id>                 待判定的评测任务 ID

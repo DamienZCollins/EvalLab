@@ -10,13 +10,13 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>evallab-server</artifactId>
-    <name>evallab-server</name>
+    <artifactId>server</artifactId>
+    <name>server</name>
 
     <dependencies>
         <dependency>
             <groupId>com.evallab</groupId>
-            <artifactId>evallab-contract</artifactId>
+            <artifactId>contract</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

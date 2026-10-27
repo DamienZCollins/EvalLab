@@ -10,14 +10,14 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>evallab-agent-websearch</artifactId>
-    <name>evallab-agent-websearch</name>
+    <artifactId>agent-websearch</artifactId>
+    <name>agent-websearch</name>
     <description>Web 搜索 Agent 示例：搜索 → 抓取 → 总结，按 Trace 契约上报</description>
 
     <dependencies>
         <dependency>
             <groupId>com.evallab</groupId>
-            <artifactId>evallab-contract</artifactId>
+            <artifactId>contract</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

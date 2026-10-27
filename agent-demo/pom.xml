@@ -10,15 +10,17 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>evallab-contract</artifactId>
-    <name>evallab-contract</name>
-    <description>Trace 接入契约：平台与 Agent 共用的数据模型，不依赖任何框架</description>
+    <artifactId>agent-demo</artifactId>
+    <name>agent-demo</name>
 
     <dependencies>
-        <!-- 仅用注解声明线上字段名，不引入 Jackson 运行时 -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
+            <groupId>com.evallab</groupId>
+            <artifactId>contract</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -26,4 +28,14 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <finalName>fault-injection-agent</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

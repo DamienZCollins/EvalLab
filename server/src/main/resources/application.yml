@@ -1,6 +1,6 @@
 spring:
   application:
-    name: evallab-server
+    name: server
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:

@@ -19,11 +19,11 @@
     <description>Agent 离线评测平台</description>
 
     <modules>
-        <module>evallab-contract</module>
-        <module>evallab-server</module>
-        <module>evallab-agent-demo</module>
-        <module>evallab-agent-websearch</module>
-        <module>evallab-cli</module>
+        <module>contract</module>
+        <module>server</module>
+        <module>agent-demo</module>
+        <module>agent-websearch</module>
+        <module>cli</module>
     </modules>
 
     <properties>
@@ -48,7 +48,7 @@
             </dependency>
             <dependency>
                 <groupId>com.evallab</groupId>
-                <artifactId>evallab-contract</artifactId>
+                <artifactId>contract</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
