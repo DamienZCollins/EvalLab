@@ -2,7 +2,7 @@
 
 独立的 Agent 离线评测平台：从 Trace 采集到回归门禁的完整闭环。
 
-> 当前进度：阶段 4（基线 + 回归门禁 + CLI）。实测指标见 [METRICS](docs/METRICS.md)。
+> 当前进度：阶段 5（Trace 可视化 + Web 搜索 Agent）。实测指标见 [METRICS](docs/METRICS.md)。
 
 ## 核心能力（规划）
 
@@ -40,8 +40,9 @@ EvalLab/
 │       │   └── infra/       # 基础设施：db（MyBatis-Plus）/ agent（HTTP）/ llm（ChatClient）/ seed
 │       └── resources/       # 配置与 db/migration 迁移脚本
 ├── evallab-agent-demo/      # 故障注入 Agent：5 类故障 + /admin/degrade 运行期退化开关
+├── evallab-agent-websearch/ # Web 搜索 Agent：本地索引，搜索 → 抓取 → 总结，结果确定可复现
 ├── evallab-cli/             # 回归门禁命令行，退出码 0/1/2，供 CI 使用
-├── evallab-web/             # 前端：用例管理 / 评测任务（归因饼图）/ 基线与门禁 / 人工抽检
+├── evallab-web/             # 前端：用例管理 / 评测任务（归因饼图、Trace 树）/ 基线与门禁 / 人工抽检
 ├── docker/                  # docker-compose.yml（mysql / server / agent / web）+ 初始化脚本
 ├── docs/                    # 方案、开发路径、设计决策、Trace 契约、编码约定
 └── .env.example             # 服务端环境变量模板
@@ -69,6 +70,7 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
 | 后端接口 | http://localhost:8080 |
 | 接口文档 | http://localhost:8080/swagger-ui.html |
 | 故障注入 Agent | http://localhost:8081 |
+| Web 搜索 Agent | http://localhost:8083 |
 
 首次启动时 Flyway 自动建表，并按需写入 10 个演示用例（5 正常 + 5 故障）。
 
@@ -135,7 +137,7 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/trace` | Trace 上报（补充路径，不参与评测） |
-| GET | `/api/trace/{traceId}` | Trace 详情 |
+| GET | `/api/trace/{traceId}` | Trace 详情（前端 Trace 树的数据源） |
 | GET/POST | `/api/testcase` | 用例列表 / 创建 |
 | GET/PUT/DELETE | `/api/testcase/{id}` | 用例详情 / 更新（version +1）/ 删除 |
 | GET/POST | `/api/testcase/group` | 分组列表 / 创建 |
@@ -163,6 +165,24 @@ EVALLAB_LLM_MODEL=gpt-4o-mini
 ```
 
 容器内访问宿主机模型（如 Ollama）用 `http://host.docker.internal:11434`，compose 已声明 `host-gateway` 映射。Judge 温度固定 0，保证同一输入可复现；调用失败只跳过该用例的参考分并记 warn 日志，不会让整轮评测失败。
+
+## Trace 可视化
+
+评测结果表里点 Trace 列的短 ID 进入 `/trace/{trace_id}`：按 `parent_span_id` 建树递归展示，
+LLM 调用 / 工具调用分别着色，`error` 非空的节点整行标红并展开错误信息，每个 span 可折叠，
+输入输出与 events 按需展开。父节点缺失的 span 会提到根层展示，不会整棵子树消失。
+
+## Web 搜索 Agent
+
+第二个示例 Agent，验证平台不只适配故障注入场景。`搜索 → 抓取 → 总结` 三步工具链，
+搜索走本地 8 篇文档的索引（`LocalSearchIndex`），结果完全确定，适合做回归基线：
+
+```bash
+java -jar evallab-agent-websearch/target/web-search-agent.jar   # 默认 8083
+```
+
+输出固定为 `{"answer": "<首条结果标题>", "sources": <抓取篇数>, "steps": <工具调用数>}`。
+换成真实搜索 API 只需实现 `SearchProvider`，默认实现保持离线可用。
 
 ## 回归门禁
 

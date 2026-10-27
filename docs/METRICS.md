@@ -110,3 +110,41 @@
 
 - 三次退化都由 `fault-injection-agent` 的运行期开关制造，指标变化幅度可控，因此检出率高是设计内的结果。真实 Agent 的退化往往是「部分用例轻微变差」，是否越界取决于阈值设置，需要按项目调参。
 - 基线记录的是单一任务的快照，没有做多轮取均值；单次任务的抖动（尤其是 P95）会直接进入基线。用例数越多越稳定，20 个用例时 P95 在干净运行间的波动约 ±10%。
+
+## 阶段 5：Trace 可视化与 Web 搜索 Agent
+
+### 环境
+
+| 项 | 值 |
+|----|-----|
+| 被测 Agent | `web-search-agent`（本地索引，搜索 → 抓取 → 总结，结果确定） |
+| Judge 模型 | DeepSeek V4.1 Flash（OpenAI 兼容端点） |
+| 用例数 | 20（`websearch` 分组：8 EXACT / 5 REGEX / 5 JSON_SCHEMA / 1 无结果 / 1 仅工具序列） |
+| 部署 | Docker Compose：server + websearch-agent 容器，MySQL 运行在容器内 |
+| 任务 | `373436411719847936` |
+
+### 评测结果
+
+| 指标 | 实测 | 目标 |
+|------|------|------|
+| 通过率 | **20 / 20 = 100%** | > 80% |
+| 平均分 | 0.9775 | — |
+| P95 耗时 | 2330 ms | — |
+| 端到端耗时 | 约 37 s | < 5 min |
+
+仅 `ws-tools-only` 无 Judge 分（判定依据只有工具序列，没有 `expected_output`，Judge 按设计跳过），其余 19 条都有参考分，取值分布 0.40 / 0.90 / 0.95 / 1.00。
+
+### Trace 树
+
+人工核对 `ws-spring-boot` 任务的 Trace：`plan(LLM_CALL) → web_search(TOOL_CALL) → fetch_page ×1(TOOL_CALL) → summarize(LLM_CALL)`，
+四层 `parent_span_id` 链式嵌套，前端按树渲染无孤儿节点。故障注入 Agent 的 `fault-tool-error` 任务里错误 span 整行标红并展开错误信息。
+
+### 接入 Agent 数
+
+**2 个**：`fault-injection-agent`（阶段 1–4 全程使用）、`web-search-agent`（本阶段）。
+两者共用同一份 `evallab-contract` 契约与同一个 `AgentInvoker` 端口，平台侧无 Agent 专属代码。
+
+### 已知局限
+
+- 搜索走本地 8 篇文档的索引，工具链只有 3 步，覆盖不到真实搜索 Agent 的长链与分叉；换成真实 API 后指标需要重测。
+- 20 条用例的判定依据以输出格式与工具序列为主，语义正确性主要靠 Judge 参考分，不参与 PASS 判定（见 D2）。
