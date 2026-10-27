@@ -44,6 +44,7 @@ services:
       EVALLAB_DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       # 容器内直连服务名，覆盖 application.yml 里的 localhost 默认值
       EVALLAB_FAULT_AGENT_URL: http://agent:8081
+      EVALLAB_WEBSEARCH_AGENT_URL: http://websearch-agent:8083
       # Judge 为可选能力：留空则不装配 LLM，评测照常进行
       EVALLAB_LLM_BASE_URL: ${EVALLAB_LLM_BASE_URL:-}
       EVALLAB_LLM_API_KEY: ${EVALLAB_LLM_API_KEY:-}
@@ -72,6 +73,19 @@ services:
       EVALLAB_AGENT_TIMEOUT_DELAY: ${AGENT_TIMEOUT_DELAY:-65s}
     ports:
       - "${AGENT_PORT:-8081}:8081"
+
+  websearch-agent:
+    build:
+      context: ..
+      dockerfile: evallab-agent-websearch/Dockerfile
+    image: evallab/agent-websearch:0.1.0
+    container_name: evallab-websearch-agent
+    restart: unless-stopped
+    environment:
+      EVALLAB_WEBSEARCH_AGENT_PORT: 8083
+      EVALLAB_WEBSEARCH_TOP_K: ${WEBSEARCH_TOP_K:-1}
+    ports:
+      - "${WEBSEARCH_AGENT_PORT:-8083}:8083"
 
   web:
     build:

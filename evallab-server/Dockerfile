@@ -7,12 +7,14 @@ COPY pom.xml .
 COPY evallab-contract/pom.xml evallab-contract/
 COPY evallab-server/pom.xml evallab-server/
 COPY evallab-agent-demo/pom.xml evallab-agent-demo/
+COPY evallab-agent-websearch/pom.xml evallab-agent-websearch/
 COPY evallab-cli/pom.xml evallab-cli/
 RUN mvn -B -q dependency:go-offline -DskipTests || true
 
 COPY evallab-contract/src evallab-contract/src
 COPY evallab-server/src evallab-server/src
 COPY evallab-agent-demo/src evallab-agent-demo/src
+COPY evallab-agent-websearch/src evallab-agent-websearch/src
 RUN mvn -B -q package -DskipTests
 
 # 运行阶段：只保留 JRE 与产物，镜像不含 Maven 与源码
