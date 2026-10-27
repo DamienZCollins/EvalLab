@@ -68,7 +68,8 @@ public class AgentDegradation {
         if (!s.enabled() || request.faultInjection() != null) {
             return false;
         }
-        return s.caseIds().isEmpty() || s.caseIds().contains(request.caseId());
+        // 不可变集合的 contains(null) 会抛 NPE，而自检上报不带 case_id
+        return s.caseIds().isEmpty() || (request.caseId() != null && s.caseIds().contains(request.caseId()));
     }
 
     /** SLOW 模式的附加阻塞时长。 */
