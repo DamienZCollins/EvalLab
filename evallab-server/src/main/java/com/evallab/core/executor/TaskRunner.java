@@ -4,6 +4,8 @@ import com.evallab.contract.trace.SpanDto;
 import com.evallab.contract.trace.SpanType;
 import com.evallab.contract.trace.TraceReport;
 import com.evallab.contract.trace.TraceStatus;
+import com.evallab.core.attributor.AttributionEvidence;
+import com.evallab.core.attributor.Attributor;
 import com.evallab.core.eval.EvalResult;
 import com.evallab.core.eval.EvalTaskStore;
 import com.evallab.core.eval.FailureCategory;
@@ -35,13 +37,15 @@ public class TaskRunner {
     private final AgentInvoker agentInvoker;
     private final TraceService traceService;
     private final ScoringPipeline scoringPipeline;
+    private final Attributor attributor;
     private final EvalTaskStore taskStore;
 
     public TaskRunner(AgentInvoker agentInvoker, TraceService traceService,
-                      ScoringPipeline scoringPipeline, EvalTaskStore taskStore) {
+                      ScoringPipeline scoringPipeline, Attributor attributor, EvalTaskStore taskStore) {
         this.agentInvoker = agentInvoker;
         this.traceService = traceService;
         this.scoringPipeline = scoringPipeline;
+        this.attributor = attributor;
         this.taskStore = taskStore;
     }
 
@@ -90,12 +94,23 @@ public class TaskRunner {
         String failureReason = verdict.passed() && !passed
                 ? "Agent 状态 " + trace.status()
                 : verdict.failureReason();
-        FailureCategory category = trace.status() == TraceStatus.TIMEOUT
-                ? FailureCategory.ENVIRONMENT : null;
+        FailureCategory category = attributor.attribute(evidence(testCase, trace, agentOutput, verdict), passed);
 
         return taskStore.saveResult(new EvalResult(null, taskId, testCase.testcaseId(),
                 testCase.version(), trace.traceId(), passed, failureReason, category,
                 durationMs, verdict.avgScore(), Instant.now(), verdict.records()));
+    }
+
+    /** 归因证据只取自 Trace 与评分结果，不含 fault_injection（见 Attributor 类注释）。 */
+    private static AttributionEvidence evidence(TestCase testCase, TraceReport trace,
+                                               AgentOutput agentOutput, ScoringPipeline.Verdict verdict) {
+        List<String> spanErrors = trace.spans() == null ? List.of() : trace.spans().stream()
+                .filter(s -> s.error() != null && !s.error().isBlank())
+                .map(s -> (s.toolName() == null ? s.spanType().name() : s.toolName()) + ": " + s.error())
+                .toList();
+        return new AttributionEvidence(testCase, trace.status(), agentOutput.toolNames(), spanErrors,
+                agentOutput.output(), verdict.rulePassed(), verdict.toolScore(),
+                verdict.toolThreshold(), agentOutput.toolNames().isEmpty());
     }
 
     /** 全部 TOOL_CALL span 按 start_time 升序展平，嵌套层级忽略（见 D3）。 */
@@ -111,6 +126,10 @@ public class TaskRunner {
                 .toList();
     }
 
+    /**
+     * 拉取阶段就失败：连不上、超时、响应不合契约，还没有 Trace 可归因，
+     * 直接采用调用器给出的分层（D1）。
+     */
     private EvalResult failure(long taskId, TestCase testCase, Instant started,
                                FailureCategory category, String reason) {
         return new EvalResult(null, taskId, testCase.testcaseId(), testCase.version(),
