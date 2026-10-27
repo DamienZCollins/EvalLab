@@ -65,7 +65,7 @@
 | 用例数 | 20（`regression` 分组，1-10 为 EXACT + 工具序列，11-20 为仅工具序列） |
 | 基线任务 | `373424401737191424`：通过率 1.0000 / 平均分 1.0000 / P95 2110ms |
 | 阈值 | 通过率 -0.10、平均分 -0.15、P95 ×1.5（均为默认值） |
-| 门禁调用 | `POST /api/eval/gate` 与 `java -jar evallab-cli.jar` 各调一次 |
+| 门禁调用 | `POST /api/eval/gate` 与 `java -jar cli/target/cli.jar` 各调一次 |
 
 用例拆成「带输出校验」和「仅工具校验」两组，是为了让三种退化各自只打中一项指标：
 `BAD_OUTPUT` 改坏输出，让 11-20 的规则分不参与、只拉低平均分；`FAIL_STATUS` 只改状态，
@@ -142,7 +142,7 @@
 ### 接入 Agent 数
 
 **2 个**：`fault-injection-agent`（阶段 1–4 全程使用）、`web-search-agent`（本阶段）。
-两者共用同一份 `evallab-contract` 契约与同一个 `AgentInvoker` 端口，平台侧无 Agent 专属代码。
+两者共用同一份 `contract` 契约与同一个 `AgentInvoker` 端口，平台侧无 Agent 专属代码。
 
 ### 已知局限
 

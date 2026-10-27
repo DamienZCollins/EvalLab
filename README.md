@@ -32,21 +32,21 @@
 
 ```text
 EvalLab/
-├── evallab-contract/        # 平台与 Agent 共用契约：Trace DTO、/execute 请求体，无框架依赖
-├── evallab-server/          # 后端服务
+├── contract/        # 平台与 Agent 共用契约：Trace DTO、/execute 请求体，无框架依赖
+├── server/          # 后端服务
 │   └── src/main/
 │       ├── java/com/evallab/
 │       │   ├── api/         # REST 接口层：common / trace / testcase / eval / baseline / redteam / review
 │       │   ├── core/        # 核心领域：trace / testcase / scorer / attributor / eval / executor / baseline / redteam / review
 │       │   └── infra/       # 基础设施：db（MyBatis-Plus）/ agent（HTTP）/ llm（ChatClient）/ seed
 │       └── resources/       # 配置与 db/migration 迁移脚本
-├── evallab-agent-demo/      # 故障注入 Agent：5 类故障 + /admin/degrade 退化开关 + 输入侧提示注入过滤
-├── evallab-agent-websearch/ # Web 搜索 Agent：本地索引，搜索 → 抓取 → 总结，结果确定可复现
-├── evallab-cli/             # 回归门禁命令行，退出码 0/1/2，供 CI 使用
-├── evallab-web/             # 前端：用例管理 / 评测任务（归因饼图、Trace 树）/ 基线与门禁 / 红队评测 / 人工抽检
-├── docker/                  # docker-compose.yml（mysql / server / agent / web）+ 初始化脚本
-├── docs/                    # 方案、开发路径、设计决策、Trace 契约、编码约定
-└── .env.example             # 服务端环境变量模板
+├── agent-demo/      # 故障注入 Agent：5 类故障 + /admin/degrade 退化开关 + 输入侧提示注入过滤
+├── agent-websearch/ # Web 搜索 Agent：本地索引，搜索 → 抓取 → 总结，结果确定可复现
+├── cli/             # 回归门禁命令行，退出码 0/1/2，供 CI 使用
+├── web/             # 前端：用例管理 / 评测任务（归因饼图、Trace 树）/ 基线与门禁 / 红队评测 / 人工抽检
+├── docker/          # docker-compose.yml（mysql / server / agent / websearch-agent / web）+ 初始化脚本
+├── docs/            # 方案、开发路径、设计决策、Trace 契约、编码约定
+└── .env.example     # 服务端环境变量模板
 ```
 
 ## 快速开始
@@ -105,17 +105,17 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
    ```
 
    ```bash
-   java -jar evallab-server/target/evallab-server-0.1.0-SNAPSHOT.jar
+   java -jar server/target/server-0.1.0-SNAPSHOT.jar
    ```
 
    ```bash
-   java -jar evallab-agent-demo/target/fault-injection-agent.jar
+   java -jar agent-demo/target/fault-injection-agent.jar
    ```
 
 4. **启动前端**：
 
    ```bash
-   cd evallab-web && npm install && npm run dev
+   cd web && npm install && npm run dev
    ```
 
    Vite 开发服务器监听 `5173`，把 `/api` 代理到 `EVALLAB_SERVER_URL`（默认 `http://localhost:8080`）。
@@ -182,7 +182,7 @@ LLM 调用 / 工具调用分别着色，`error` 非空的节点整行标红并�
 搜索走本地 8 篇文档的索引（`LocalSearchIndex`），结果完全确定，适合做回归基线：
 
 ```bash
-java -jar evallab-agent-websearch/target/web-search-agent.jar   # 默认 8083
+java -jar agent-websearch/target/web-search-agent.jar   # 默认 8083
 ```
 
 输出固定为 `{"answer": "<首条结果标题>", "sources": <抓取篇数>, "steps": <工具调用数>}`。
@@ -207,10 +207,10 @@ curl -i -X POST http://localhost:8080/api/eval/gate \
 阈值默认通过率 -0.10、平均分 -0.15、P95 倍率 1.5，可在请求的 `thresholds` 里覆盖。
 三项均为相对基线的变化：前两项是绝对差值（负数为跌幅），P95 是倍率。指标缺失（如基线无评分记录）时该项跳过，不判失败。
 
-命令行工具供 CI 使用，打包产物 `evallab-cli/target/evallab-cli.jar`：
+命令行工具供 CI 使用，打包产物 `cli/target/cli.jar`：
 
 ```bash
-java -jar evallab-cli/target/evallab-cli.jar --task <id> --baseline <id> \
+java -jar cli/target/cli.jar --task <id> --baseline <id> \
   --threshold-pass-rate -0.10 --threshold-avg-score -0.15 --threshold-p95-duration 1.5
 ```
 

@@ -10,7 +10,7 @@
 | **拉取（主）** | 平台 → Agent `POST /execute` | 评测任务逐用例执行 | 是 |
 | **上报（补充）** | Agent → 平台 `POST /api/trace` | 离线补录、调试、独立验证 | 否 |
 
-两者共用同一份 Trace 数据结构（`evallab-contract` 模块中的 `TraceReport` / `SpanDto` / `SpanEvent`），避免契约漂移。
+两者共用同一份 Trace 数据结构（`contract` 模块中的 `TraceReport` / `SpanDto` / `SpanEvent`），避免契约漂移。
 
 ## 2. 拉取：平台调用 Agent
 
@@ -135,12 +135,12 @@ HTTP 200，`Content-Type: application/json`，body 为完整 `TraceReport`（见
 
 ## 5. 故障注入 Agent
 
-阶段 1 提供的参考实现，模块 `evallab-agent-demo`，构建产物 `fault-injection-agent.jar`。
+阶段 1 提供的参考实现，模块 `agent-demo`，构建产物 `fault-injection-agent.jar`。
 
 ### 运行
 
 ```bash
-java -jar evallab-agent-demo/target/fault-injection-agent.jar
+java -jar agent-demo/target/fault-injection-agent.jar
 ```
 
 | 环境变量 | 默认值 | 说明 |
