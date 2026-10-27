@@ -1,0 +1,27 @@
+package com.evallab.api.eval;
+
+import com.evallab.api.common.IdJson;
+import com.evallab.core.eval.EvalTaskStatus;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+
+@Schema(description = "评测任务汇总")
+public record EvalTaskResponse(
+        @JsonSerialize(using = IdJson.class) Long taskId,
+        String agentName,
+        EvalTaskStatus status,
+        int totalCases,
+        int passedCases,
+        int failedCases,
+        BigDecimal passRate,
+        BigDecimal avgScore,
+        Long p95DurationMs,
+        String error,
+        Instant startedAt,
+        Instant completedAt,
+        Instant createdAt
+) {
+}
