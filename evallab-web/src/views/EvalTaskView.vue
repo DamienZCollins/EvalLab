@@ -33,6 +33,12 @@
         <div class="stat-label">P95 耗时</div>
         <div class="stat-value">{{ task.p95_duration_ms ? task.p95_duration_ms + ' ms' : '—' }}</div>
       </div>
+      <div class="stat" v-if="task.is_regression_detected !== null && task.is_regression_detected !== undefined">
+        <div class="stat-label">回归门禁</div>
+        <el-tag :type="task.is_regression_detected ? 'danger' : 'success'">
+          {{ task.is_regression_detected ? '检测到回归' : '通过' }}
+        </el-tag>
+      </div>
       <div class="stat">
         <div class="stat-label">任务号</div>
         <div class="stat-value mono">{{ task.task_id }}</div>
