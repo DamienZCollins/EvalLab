@@ -15,3 +15,8 @@ export const evalApi = {
   getTask: (id) => client.get(`/eval/task/${id}`),
   results: (id) => client.get(`/eval/task/${id}/result`)
 }
+
+export const reviewApi = {
+  submit: (body) => client.post('/manual-review', body),
+  accuracy: () => client.get('/manual-review/accuracy')
+}

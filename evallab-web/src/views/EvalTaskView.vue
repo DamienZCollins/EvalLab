@@ -40,6 +40,33 @@
     </div>
     <el-alert v-if="task.error" :title="task.error" type="error" :closable="false" show-icon />
 
+    <el-row v-if="failedResults.length" :gutter="16" style="margin-top: 16px">
+      <el-col :span="10">
+        <div class="panel-title">失败分层分布</div>
+        <AttributionPie :data="attributionData" />
+      </el-col>
+      <el-col :span="14">
+        <div class="panel-title">Judge 概览</div>
+        <div class="judge-summary">
+          <div class="stat">
+            <div class="stat-label">Judge 平均分</div>
+            <div class="stat-value">{{ judgeAverage ?? '—' }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">有 Judge 评分的用例</div>
+            <div class="stat-value">{{ judgeCount }} / {{ results.length }}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">人工抽检</div>
+            <el-button size="small" @click="$router.push('/review')">去抽检</el-button>
+          </div>
+        </div>
+        <div class="muted" style="margin-top: 8px">
+          Judge 是参考型评分，只提供质量信号，不参与 PASS/FAIL 判定（设计决策 D2）。
+        </div>
+      </el-col>
+    </el-row>
+
     <el-table :data="results" v-loading="loadingResults" stripe style="margin-top: 16px">
       <el-table-column type="expand">
         <template #default="{ row }">
@@ -73,9 +100,17 @@
           <span :class="{ muted: !row.failure_reason }">{{ row.failure_reason || '—' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="归因" width="120">
+      <el-table-column label="归因" width="130">
         <template #default="{ row }">
-          <span class="muted">{{ row.failure_category || '—' }}</span>
+          <el-tag v-if="row.failure_category" size="small" type="warning">
+            {{ CATEGORY_LABELS[row.failure_category] || row.failure_category }}
+          </el-tag>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="Judge" width="90">
+        <template #default="{ row }">
+          <span :class="{ muted: judgeOf(row) === null }">{{ judgeOf(row) ?? '—' }}</span>
         </template>
       </el-table-column>
       <el-table-column label="耗时" width="110">
@@ -96,9 +131,19 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { evalApi, testcaseApi } from '../api'
+import AttributionPie from '../components/AttributionPie.vue'
+
+const CATEGORY_LABELS = {
+  ENVIRONMENT: '数据/环境问题',
+  TOOL_CALL: '工具调用错误',
+  INPUT_MISUNDERSTAND: '输入理解错误',
+  PLANNING: '规划错误',
+  OUTPUT_GENERATION: '输出生成错误',
+  UNKNOWN: '未分类'
+}
 
 const form = ref({ agentName: 'fault-injection-agent', groupId: null, tag: '' })
 const groups = ref([])
@@ -112,6 +157,32 @@ let timer = null
 const statusType = (s) => ({ COMPLETED: 'success', FAILED: 'danger', RUNNING: 'warning' })[s] || 'info'
 const percent = (v) => (v === null || v === undefined ? '—' : (Number(v) * 100).toFixed(1) + '%')
 const caseName = (id) => caseNames.value[id] || `用例 #${id}`
+
+const failedResults = computed(() => results.value.filter((r) => r.status === 'FAIL'))
+
+const attributionData = computed(() => {
+  const counts = {}
+  for (const r of failedResults.value) {
+    const key = r.failure_category || 'UNKNOWN'
+    counts[key] = (counts[key] || 0) + 1
+  }
+  return Object.entries(counts).map(([name, value]) => ({ name, value }))
+})
+
+const judgeScores = computed(() =>
+  results.value
+    .map((r) => r.scores?.find((s) => s.scorer_type === 'LLM_JUDGE')?.score)
+    .filter((v) => v !== null && v !== undefined)
+    .map(Number)
+)
+
+const judgeCount = computed(() => judgeScores.value.length)
+const judgeAverage = computed(() => {
+  if (!judgeScores.value.length) return null
+  return (judgeScores.value.reduce((a, b) => a + b, 0) / judgeScores.value.length).toFixed(3)
+})
+
+const judgeOf = (row) => row.scores?.find((s) => s.scorer_type === 'LLM_JUDGE')?.score ?? null
 
 async function start() {
   if (!form.value.agentName) {
@@ -172,6 +243,16 @@ onBeforeUnmount(clearTimer)
 <style scoped>
 .block {
   margin-bottom: 16px;
+}
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.judge-summary {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
 }
 .stats {
   display: flex;
