@@ -46,6 +46,14 @@ evallab:
   eval:
     # 0.8：顺序不同(0.8)仍通过，缺任一步骤(≤0.75)即失败；归因见设计决策 D2
     tool-correctness-threshold: 0.8
+  llm:
+    # 留空即关闭 Judge：评测照常跑确定性评分器，只是没有参考型评分
+    base-url: ${EVALLAB_LLM_BASE_URL:}
+    api-key: ${EVALLAB_LLM_API_KEY:}
+    model: ${EVALLAB_LLM_MODEL:gpt-4o-mini}
+    # Judge 取 0 保证同一输入可复现
+    temperature: 0.0
+    timeout: ${EVALLAB_LLM_TIMEOUT:60s}
   agent:
     registry:
       fault-injection-agent:

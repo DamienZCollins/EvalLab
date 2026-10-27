@@ -2,7 +2,7 @@
 
 独立的 Agent 离线评测平台：从 Trace 采集到回归门禁的完整闭环。
 
-> 当前进度：阶段 2（用例管理 + 规则/工具评分 + 异步评测引擎 + Web 界面 + Docker Compose 一键启动）。
+> 当前进度：阶段 3（LLM-as-Judge + 5 层失败归因 + 人工抽检校准）。实测指标见 [METRICS](docs/METRICS.md)。
 
 ## 核心能力（规划）
 
@@ -22,7 +22,7 @@
 | 后端 | Spring Boot 3.5.1 + MyBatis-Plus 3.5.9 + Flyway |
 | 数据库 | MySQL 8.0.40 |
 | LLM | Spring AI 1.1.0（OpenAI 兼容接口） |
-| 前端 | Vue 3.5 + Element Plus（ECharts 于阶段 3 接入） |
+| 前端 | Vue 3.5 + Element Plus + ECharts |
 | 本地环境 | Docker Compose |
 
 不使用 Redis / Elasticsearch / Sa-Token（单用户、初期数据量小，见总体方案）。
@@ -35,12 +35,12 @@ EvalLab/
 ├── evallab-server/          # 后端服务
 │   └── src/main/
 │       ├── java/com/evallab/
-│       │   ├── api/         # REST 接口层：common / trace / testcase / eval
-│       │   ├── core/        # 核心领域：trace / testcase / scorer / eval / executor
-│       │   └── infra/       # 基础设施：db（MyBatis-Plus）/ agent（HTTP 调用）/ seed
+│       │   ├── api/         # REST 接口层：common / trace / testcase / eval / review
+│       │   ├── core/        # 核心领域：trace / testcase / scorer / attributor / eval / executor / review
+│       │   └── infra/       # 基础设施：db（MyBatis-Plus）/ agent（HTTP）/ llm（ChatClient）/ seed
 │       └── resources/       # 配置与 db/migration 迁移脚本
 ├── evallab-agent-demo/      # 故障注入 Agent，模拟完整 Trace 并支持 5 类故障
-├── evallab-web/             # 前端：用例管理页 + 评测任务页
+├── evallab-web/             # 前端：用例管理 / 评测任务（含归因饼图）/ 人工抽检
 ├── docker/                  # docker-compose.yml（mysql / server / agent / web）+ 初始化脚本
 ├── docs/                    # 方案、开发路径、设计决策、Trace 契约、编码约定
 └── .env.example             # 服务端环境变量模板
@@ -123,6 +123,8 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
 3. **逐例执行**：平台主动调 Agent 的 `POST /execute`（拉取，见 [D1](docs/设计决策.md)），拿到 Trace 后评分。
 4. **判定**：所有启用的判定型 scorer 均通过才算 PASS，见 [D2](docs/设计决策.md)。
 5. **统计**：通过率、平均分、P95 耗时；单例结果保留 `testcase_version` 以复现。
+6. **归因**：失败用例按 5 层规则自动归类，只依据 Trace 与评分证据，不读故障注入参数（见 [D4](docs/设计决策.md)）。
+7. **校准**：人工抽检对照，计算 Judge 准确率（分差 < 0.1）与归因准确率。
 
 规则评分器与工具评分器的口径：工具序列完全一致得 1.0，集合相同仅顺序不同得 0.8，其余按 LCS 长度比；阈值 `evallab.eval.tool-correctness-threshold` 默认 0.8。
 
@@ -137,9 +139,25 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
 | GET/POST | `/api/testcase/group` | 分组列表 / 创建 |
 | POST | `/api/eval/task` | 创建评测任务 |
 | GET | `/api/eval/task/{id}` | 任务状态与统计 |
-| GET | `/api/eval/task/{id}/result` | 单例结果与评分明细 |
+| GET | `/api/eval/task/{id}/result` | 单例结果、评分明细与失败归因 |
+| POST | `/api/manual-review` | 提交人工抽检（同一 result_id 覆盖） |
+| GET | `/api/manual-review/accuracy` | Judge 与归因准确率 |
 
 约定：响应统一 `{code, message, data}`，字段 snake_case，时间为 ISO 8601，雪花 ID 以字符串返回（超出 JS 安全整数范围）。
+
+## LLM-as-Judge
+
+Judge 是可选能力：`EVALLAB_LLM_BASE_URL` 留空则完全不装配 LLM，评测照常跑确定性评分器，`avg_score` 少一条参考分而已。
+
+配置任意 OpenAI 兼容端点即可启用：
+
+```bash
+EVALLAB_LLM_BASE_URL=https://api.openai.com
+EVALLAB_LLM_API_KEY=sk-...
+EVALLAB_LLM_MODEL=gpt-4o-mini
+```
+
+容器内访问宿主机模型（如 Ollama）用 `http://host.docker.internal:11434`，compose 已声明 `host-gateway` 映射。Judge 温度固定 0，保证同一输入可复现；调用失败只跳过该用例的参考分并记 warn 日志，不会让整轮评测失败。
 
 ## 常见问题
 
