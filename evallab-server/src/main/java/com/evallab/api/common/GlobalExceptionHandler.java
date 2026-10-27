@@ -2,6 +2,8 @@ package com.evallab.api.common;
 
 import com.evallab.core.baseline.BaselineNotFoundException;
 import com.evallab.core.eval.EvalTaskNotFoundException;
+import com.evallab.core.redteam.InvalidRedteamCaseException;
+import com.evallab.core.redteam.RedteamCaseNotFoundException;
 import com.evallab.core.review.ManualReviewService;
 import com.evallab.core.testcase.InvalidTestCaseException;
 import com.evallab.core.testcase.TestCaseNotFoundException;
@@ -37,12 +39,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({TraceNotFoundException.class, TestCaseNotFoundException.class,
-            EvalTaskNotFoundException.class, BaselineNotFoundException.class})
+            EvalTaskNotFoundException.class, BaselineNotFoundException.class,
+            RedteamCaseNotFoundException.class})
     public ResponseEntity<Result<Void>> handleNotFound(RuntimeException e) {
         return respond(ErrorCode.NOT_FOUND, e.getMessage());
     }
 
-    @ExceptionHandler({InvalidTestCaseException.class, ManualReviewService.InvalidReviewException.class})
+    @ExceptionHandler({InvalidTestCaseException.class, ManualReviewService.InvalidReviewException.class,
+            InvalidRedteamCaseException.class})
     public ResponseEntity<Result<Void>> handleInvalidTestCase(RuntimeException e) {
         return ResponseEntity.status(ErrorCode.INVALID_ARGUMENT.status())
                 .body(Result.fail(ErrorCode.INVALID_ARGUMENT.code(), e.getMessage()));
