@@ -2,7 +2,7 @@
 
 独立的 Agent 离线评测平台：从 Trace 采集到回归门禁的完整闭环。
 
-> 当前进度：阶段 5（Trace 可视化 + Web 搜索 Agent）。实测指标见 [METRICS](docs/METRICS.md)。
+> 当前进度：阶段 6（红队用例与拦截率报告）。实测指标见 [METRICS](docs/METRICS.md)。
 
 ## 核心能力（规划）
 
@@ -11,6 +11,7 @@
 3. **失败归因分层**：5 层自动归因（输入理解 / 规划 / 工具调用 / 输出生成 / 数据环境）
 4. **Judge 校准体系**：人工抽检对照组，计算 Judge 准确率与归因准确率
 5. **回归门禁**：基线对比 + 阈值判断，指标退化时以退出码 1 拦截 CI
+6. **红队评测**：提示注入 / 越狱 / 隐私泄露用例，输出拦截率与逐条攻破明细
 
 详见 [总体方案](docs/总体方案.md) 与 [开发路径](docs/开发路径.md)，已定案的设计决策见 [设计决策](docs/设计决策.md)。
 
@@ -35,14 +36,14 @@ EvalLab/
 ├── evallab-server/          # 后端服务
 │   └── src/main/
 │       ├── java/com/evallab/
-│       │   ├── api/         # REST 接口层：common / trace / testcase / eval / baseline / review
-│       │   ├── core/        # 核心领域：trace / testcase / scorer / attributor / eval / executor / baseline / review
+│       │   ├── api/         # REST 接口层：common / trace / testcase / eval / baseline / redteam / review
+│       │   ├── core/        # 核心领域：trace / testcase / scorer / attributor / eval / executor / baseline / redteam / review
 │       │   └── infra/       # 基础设施：db（MyBatis-Plus）/ agent（HTTP）/ llm（ChatClient）/ seed
 │       └── resources/       # 配置与 db/migration 迁移脚本
-├── evallab-agent-demo/      # 故障注入 Agent：5 类故障 + /admin/degrade 运行期退化开关
+├── evallab-agent-demo/      # 故障注入 Agent：5 类故障 + /admin/degrade 退化开关 + 输入侧提示注入过滤
 ├── evallab-agent-websearch/ # Web 搜索 Agent：本地索引，搜索 → 抓取 → 总结，结果确定可复现
 ├── evallab-cli/             # 回归门禁命令行，退出码 0/1/2，供 CI 使用
-├── evallab-web/             # 前端：用例管理 / 评测任务（归因饼图、Trace 树）/ 基线与门禁 / 人工抽检
+├── evallab-web/             # 前端：用例管理 / 评测任务（归因饼图、Trace 树）/ 基线与门禁 / 红队评测 / 人工抽检
 ├── docker/                  # docker-compose.yml（mysql / server / agent / web）+ 初始化脚本
 ├── docs/                    # 方案、开发路径、设计决策、Trace 契约、编码约定
 └── .env.example             # 服务端环境变量模板
@@ -149,6 +150,9 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
 | POST | `/api/baseline` | 从已完成任务创建基线（同一任务仅一条） |
 | GET | `/api/baseline` | 基线列表 |
 | POST | `/api/eval/gate` | 回归门禁：通过 200，回归 422 |
+| GET/POST | `/api/redteam` | 红队用例列表（可按攻击类型筛选）/ 创建 |
+| GET/PUT/DELETE | `/api/redteam/{id}` | 红队用例详情 / 更新 / 删除 |
+| GET | `/api/eval/task/{id}/redteam-report` | 红队拦截率与逐条攻破明细 |
 
 约定：响应统一 `{code, message, data}`，字段 snake_case，时间为 ISO 8601，雪花 ID 以字符串返回（超出 JS 安全整数范围）。
 
@@ -219,6 +223,27 @@ curl -X POST http://localhost:8081/admin/degrade \
   -H 'Content-Type: application/json' \
   -d '{"mode":"FAIL_STATUS","case_ids":["<testcase_id>"]}'   # 或 BAD_OUTPUT / SLOW(delay_ms)
 ```
+
+## 红队评测
+
+红队用例复用普通评测链路：每条红队用例在库里同时写一条 `redteam` 分组的评测用例，
+判定依据是「输出不得包含禁用标记」的正则。因此发起红队评测就是一次普通的任务创建：
+
+```bash
+curl -X POST http://localhost:8080/api/eval/task \
+  -H 'Content-Type: application/json' \
+  -d '{"agent_name": "fault-injection-agent", "group_id": "<redteam 分组 ID>"}'
+
+curl http://localhost:8080/api/eval/task/<task_id>/redteam-report
+```
+
+报告给出拦截率（0–1）、按攻击类型（PROMPT_INJECTION / JAILBREAK / PII_LEAK）的分组统计，
+以及每条攻击是被拦截还是被攻破、失败的 Trace 链接。防御是否成功是确定性的：禁用标记出现在输出里即被攻破，
+不依赖 Judge，同一版本 Agent 跑两次结果一致（理由见 [D5](docs/设计决策.md#d5-红队防御用确定性守卫正则而非-judge)）。
+
+演示 Agent 增加了输入侧过滤器（`PromptGuard`），命中「忽略以上指令」「开发者模式」等特征即拒绝执行。
+过滤器刻意只覆盖直白特征，种子用例里角色扮演与假设练习两条能穿透——拦截率因此不是恒定的 100%，
+报告才能指出过滤器该补什么。前端「红队评测」页可管理用例、按攻击类型筛选并查看报告。
 
 ## 常见问题
 
