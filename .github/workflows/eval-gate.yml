@@ -1,0 +1,108 @@
+# 回归门禁示例：起平台 → 跑评测 → 调用门禁 → 失败时评论 PR
+#
+# 真实项目里「被测 Agent」是本仓库之外的服务，这里用 docker compose 里的
+# 故障注入 Agent 演示完整链路。触发方式、用例筛选条件、阈值请按实际调整。
+name: eval-gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+
+    env:
+      # 演示用口令；正式接入时用仓库 Secrets（Settings → Secrets → Actions）
+      MYSQL_ROOT_PASSWORD: ci-only-not-a-secret
+      MYSQL_DATABASE: evallab
+      AGENT_TIMEOUT_DELAY: 65s
+      # LLM-as-Judge 是可选能力，CI 里默认关闭，只跑确定性评分器
+      EVALLAB_LLM_BASE_URL: ''
+      EVALLAB_LLM_API_KEY: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: 构建
+        run: mvn -B -DskipTests package
+
+      - name: 启动平台与 Agent
+        run: |
+          docker compose -f docker/docker-compose.yml up -d --build mysql server agent
+          # 等 Flyway 迁移完成、两个服务能响应
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:8080/actuator/health >/dev/null \
+               && curl -fsS -o /dev/null -X POST http://localhost:8081/execute \
+                    -H 'Content-Type: application/json' -d '{"input":"ping"}'; then
+              echo "平台就绪"; break
+            fi
+            sleep 2
+          done
+
+      - name: 创建基线任务
+        id: baseline
+        run: |
+          task_id=$(curl -fsS -X POST http://localhost:8080/api/eval/task \
+            -H 'Content-Type: application/json' \
+            -d '{"agent_name":"fault-injection-agent"}' | jq -r '.data.task_id')
+          baseline_id=$(curl -fsS -X POST http://localhost:8080/api/baseline \
+            -H 'Content-Type: application/json' \
+            -d "{\"task_id\":\"$task_id\",\"name\":\"ci-baseline\"}" | jq -r '.data.baseline_id')
+          echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
+          echo "baseline_id=$baseline_id" >> "$GITHUB_OUTPUT"
+
+      - name: 运行回归评测
+        id: eval
+        run: |
+          task_id=$(curl -fsS -X POST http://localhost:8080/api/eval/task \
+            -H 'Content-Type: application/json' \
+            -d '{"agent_name":"fault-injection-agent"}' | jq -r '.data.task_id')
+          for i in $(seq 1 150); do
+            status=$(curl -fsS "http://localhost:8080/api/eval/task/$task_id" | jq -r '.data.status')
+            [ "$status" = "COMPLETED" ] && break
+            [ "$status" = "FAILED" ] && { echo "评测任务失败"; exit 1; }
+            sleep 2
+          done
+          echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
+
+      - name: 回归门禁
+        id: gate
+        run: |
+          # 输出直接进日志；日志里的中文按 UTF-8 写，CLI 内部已固定编码
+          java -jar evallab-cli/target/evallab-cli.jar \
+            --task "${{ steps.eval.outputs.task_id }}" \
+            --baseline "${{ steps.baseline.outputs.baseline_id }}" \
+            --threshold-pass-rate -0.10 \
+            --threshold-avg-score -0.15 \
+            --threshold-p95-duration 1.5 \
+            || exit 1
+
+      - name: 失败时评论 PR
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" --body \
+            "❌ 回归门禁未通过。评测任务 \`${{ steps.eval.outputs.task_id }}\`，基线 \`${{ steps.baseline.outputs.baseline_id }}\`，详见本次 workflow 日志。"
+
+      - name: 收集日志
+        if: always()
+        run: docker compose -f docker/docker-compose.yml logs --no-color > compose.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evallab-logs
+          path: compose.log

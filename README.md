@@ -2,7 +2,7 @@
 
 独立的 Agent 离线评测平台：从 Trace 采集到回归门禁的完整闭环。
 
-> 当前进度：阶段 3（LLM-as-Judge + 5 层失败归因 + 人工抽检校准）。实测指标见 [METRICS](docs/METRICS.md)。
+> 当前进度：阶段 4（基线 + 回归门禁 + CLI）。实测指标见 [METRICS](docs/METRICS.md)。
 
 ## 核心能力（规划）
 
@@ -35,12 +35,13 @@ EvalLab/
 ├── evallab-server/          # 后端服务
 │   └── src/main/
 │       ├── java/com/evallab/
-│       │   ├── api/         # REST 接口层：common / trace / testcase / eval / review
-│       │   ├── core/        # 核心领域：trace / testcase / scorer / attributor / eval / executor / review
+│       │   ├── api/         # REST 接口层：common / trace / testcase / eval / baseline / review
+│       │   ├── core/        # 核心领域：trace / testcase / scorer / attributor / eval / executor / baseline / review
 │       │   └── infra/       # 基础设施：db（MyBatis-Plus）/ agent（HTTP）/ llm（ChatClient）/ seed
 │       └── resources/       # 配置与 db/migration 迁移脚本
-├── evallab-agent-demo/      # 故障注入 Agent，模拟完整 Trace 并支持 5 类故障
-├── evallab-web/             # 前端：用例管理 / 评测任务（含归因饼图）/ 人工抽检
+├── evallab-agent-demo/      # 故障注入 Agent：5 类故障 + /admin/degrade 运行期退化开关
+├── evallab-cli/             # 回归门禁命令行，退出码 0/1/2，供 CI 使用
+├── evallab-web/             # 前端：用例管理 / 评测任务（归因饼图）/ 基线与门禁 / 人工抽检
 ├── docker/                  # docker-compose.yml（mysql / server / agent / web）+ 初始化脚本
 ├── docs/                    # 方案、开发路径、设计决策、Trace 契约、编码约定
 └── .env.example             # 服务端环境变量模板
@@ -125,6 +126,7 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
 5. **统计**：通过率、平均分、P95 耗时；单例结果保留 `testcase_version` 以复现。
 6. **归因**：失败用例按 5 层规则自动归类，只依据 Trace 与评分证据，不读故障注入参数（见 [D4](docs/设计决策.md)）。
 7. **校准**：人工抽检对照，计算 Judge 准确率（分差 < 0.1）与归因准确率。
+8. **门禁**：用历史任务建基线，新任务与基线比较三项指标，越界即拦截（HTTP 422 / CLI 退出码 1）。
 
 规则评分器与工具评分器的口径：工具序列完全一致得 1.0，集合相同仅顺序不同得 0.8，其余按 LCS 长度比；阈值 `evallab.eval.tool-correctness-threshold` 默认 0.8。
 
@@ -142,6 +144,9 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
 | GET | `/api/eval/task/{id}/result` | 单例结果、评分明细与失败归因 |
 | POST | `/api/manual-review` | 提交人工抽检（同一 result_id 覆盖） |
 | GET | `/api/manual-review/accuracy` | Judge 与归因准确率 |
+| POST | `/api/baseline` | 从已完成任务创建基线（同一任务仅一条） |
+| GET | `/api/baseline` | 基线列表 |
+| POST | `/api/eval/gate` | 回归门禁：通过 200，回归 422 |
 
 约定：响应统一 `{code, message, data}`，字段 snake_case，时间为 ISO 8601，雪花 ID 以字符串返回（超出 JS 安全整数范围）。
 
@@ -158,6 +163,42 @@ EVALLAB_LLM_MODEL=gpt-4o-mini
 ```
 
 容器内访问宿主机模型（如 Ollama）用 `http://host.docker.internal:11434`，compose 已声明 `host-gateway` 映射。Judge 温度固定 0，保证同一输入可复现；调用失败只跳过该用例的参考分并记 warn 日志，不会让整轮评测失败。
+
+## 回归门禁
+
+两步：用一次已完成的任务建基线，之后每轮评测与它比较。
+
+```bash
+# 1. 建基线（task_id 来自已完成任务）
+curl -X POST http://localhost:8080/api/baseline \
+  -H 'Content-Type: application/json' \
+  -d '{"task_id": "<task_id>", "name": "v1.0"}'
+
+# 2. 门禁判定：通过 200，回归 422
+curl -i -X POST http://localhost:8080/api/eval/gate \
+  -H 'Content-Type: application/json' \
+  -d '{"task_id": "<new_task_id>", "baseline_id": "<baseline_id>"}'
+```
+
+阈值默认通过率 -0.10、平均分 -0.15、P95 倍率 1.5，可在请求的 `thresholds` 里覆盖。
+三项均为相对基线的变化：前两项是绝对差值（负数为跌幅），P95 是倍率。指标缺失（如基线无评分记录）时该项跳过，不判失败。
+
+命令行工具供 CI 使用，打包产物 `evallab-cli/target/evallab-cli.jar`：
+
+```bash
+java -jar evallab-cli/target/evallab-cli.jar --task <id> --baseline <id> \
+  --threshold-pass-rate -0.10 --threshold-avg-score -0.15 --threshold-p95-duration 1.5
+```
+
+退出码 `0` 通过 / `1` 回归 / `2` 参数错误或请求失败。示例 workflow 见 [.github/workflows/eval-gate.yml](.github/workflows/eval-gate.yml)。
+
+演示退化可用 Agent 的运行期开关（内存态，重启即恢复）：
+
+```bash
+curl -X POST http://localhost:8081/admin/degrade \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"FAIL_STATUS","case_ids":["<testcase_id>"]}'   # 或 BAD_OUTPUT / SLOW(delay_ms)
+```
 
 ## 常见问题
 
