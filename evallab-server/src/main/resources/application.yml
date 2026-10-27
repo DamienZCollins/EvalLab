@@ -58,6 +58,8 @@ evallab:
     registry:
       fault-injection-agent:
         base-url: ${EVALLAB_FAULT_AGENT_URL:http://localhost:8081}
+      web-search-agent:
+        base-url: ${EVALLAB_WEBSEARCH_AGENT_URL:http://localhost:8083}
         # 需大于 Agent 侧 TIMEOUT 故障的阻塞时长，否则拿不到 TIMEOUT 结果
         timeout: ${EVALLAB_AGENT_TIMEOUT:90s}
 
