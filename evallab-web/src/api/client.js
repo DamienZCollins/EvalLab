@@ -11,7 +11,8 @@ client.interceptors.response.use(
       ElMessage.error(body.message || '请求失败')
       return Promise.reject(new Error(body.message))
     }
-    return body?.data
+    // 门禁接口直接返回业务对象，不套 {code, message, data}
+    return body && typeof body.code === 'number' ? body.data : body
   },
   (error) => {
     const message = error.response?.data?.message || error.message || '网络错误'
