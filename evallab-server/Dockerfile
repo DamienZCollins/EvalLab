@@ -7,6 +7,7 @@ COPY pom.xml .
 COPY evallab-contract/pom.xml evallab-contract/
 COPY evallab-server/pom.xml evallab-server/
 COPY evallab-agent-demo/pom.xml evallab-agent-demo/
+COPY evallab-cli/pom.xml evallab-cli/
 RUN mvn -B -q dependency:go-offline -DskipTests || true
 
 COPY evallab-contract/src evallab-contract/src

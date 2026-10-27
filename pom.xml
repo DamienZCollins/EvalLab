@@ -22,6 +22,7 @@
         <module>evallab-contract</module>
         <module>evallab-server</module>
         <module>evallab-agent-demo</module>
+        <module>evallab-cli</module>
     </modules>
 
     <properties>
