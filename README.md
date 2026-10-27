@@ -45,7 +45,7 @@ EvalLab/
 │   └── websearch/    # Web 搜索：本地索引，搜索 → 抓取 → 总结，结果确定可复现
 ├── contract/         # 平台与 Agent 共用契约：Trace DTO、/execute 请求体，无框架依赖
 ├── cli/              # 回归门禁命令行，退出码 0/1/2，供 CI 使用
-├── docker/           # docker-compose.yml（mysql / server / agent / websearch-agent / web）+ 初始化脚本
+├── docker/           # docker-compose.yml（mysql / server / agent / websearch-agent / web）与环境模板
 ├── docs/             # 方案、开发路径、设计决策、Trace 契约、编码约定
 └── .env.example      # 服务端环境变量模板
 ```
