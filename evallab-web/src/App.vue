@@ -6,6 +6,7 @@
         <el-menu-item index="/testcase">用例管理</el-menu-item>
         <el-menu-item index="/eval">评测任务</el-menu-item>
         <el-menu-item index="/baseline">基线与门禁</el-menu-item>
+        <el-menu-item index="/redteam">红队评测</el-menu-item>
         <el-menu-item index="/review">人工抽检</el-menu-item>
       </el-menu>
     </el-header>

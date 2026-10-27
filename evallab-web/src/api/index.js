@@ -28,6 +28,14 @@ export const baselineApi = {
     client.post('/eval/gate', body, { validateStatus: (status) => status === 200 || status === 422 })
 }
 
+export const redteamApi = {
+  list: (params) => client.get('/redteam', { params }),
+  create: (body) => client.post('/redteam', body),
+  update: (id, body) => client.put(`/redteam/${id}`, body),
+  remove: (id) => client.delete(`/redteam/${id}`),
+  report: (taskId) => client.get(`/eval/task/${taskId}/redteam-report`)
+}
+
 export const reviewApi = {
   submit: (body) => client.post('/manual-review', body),
   accuracy: () => client.get('/manual-review/accuracy')
