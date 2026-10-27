@@ -34,11 +34,14 @@ public class TestCaseController {
         this.mapper = mapper;
     }
 
+    // 参数名必须显式声明：全站 JSON 是 snake_case，但 @RequestParam 不做命名策略松弛绑定，
+    // 省略 name 时只认 Java 参数名（groupId），前端传的 group_id 会被静默忽略
     @Operation(summary = "查询用例列表", description = "支持按分组、标签筛选；默认只返回启用用例")
     @GetMapping
-    public Result<List<TestCaseResponse>> list(@RequestParam(required = false) Long groupId,
-                                               @RequestParam(required = false) String tag,
-                                               @RequestParam(defaultValue = "true") boolean enabledOnly) {
+    public Result<List<TestCaseResponse>> list(@RequestParam(name = "group_id", required = false) Long groupId,
+                                               @RequestParam(name = "tag", required = false) String tag,
+                                               @RequestParam(name = "enabled_only", defaultValue = "true")
+                                               boolean enabledOnly) {
         return Result.ok(testCaseService.query(new TestCaseQuery(groupId, tag, enabledOnly))
                 .stream().map(mapper::toResponse).toList());
     }
