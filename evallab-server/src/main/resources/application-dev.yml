@@ -10,3 +10,8 @@ mybatis-plus:
 springdoc:
   swagger-ui:
     enabled: true
+
+evallab:
+  demo:
+    # 首次启动写入 10 个演示用例（5 正常 + 5 故障），表非空时跳过
+    seed-enabled: true

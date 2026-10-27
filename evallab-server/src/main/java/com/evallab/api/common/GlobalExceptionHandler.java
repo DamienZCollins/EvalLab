@@ -1,5 +1,8 @@
 package com.evallab.api.common;
 
+import com.evallab.core.eval.EvalTaskNotFoundException;
+import com.evallab.core.testcase.InvalidTestCaseException;
+import com.evallab.core.testcase.TestCaseNotFoundException;
 import com.evallab.core.trace.InvalidTraceException;
 import com.evallab.core.trace.TraceNotFoundException;
 import org.slf4j.Logger;
@@ -31,9 +34,21 @@ public class GlobalExceptionHandler {
                 .body(Result.fail(ErrorCode.INVALID_TRACE.code(), e.getMessage()));
     }
 
-    @ExceptionHandler(TraceNotFoundException.class)
-    public ResponseEntity<Result<Void>> handleNotFound(TraceNotFoundException e) {
+    @ExceptionHandler({TraceNotFoundException.class, TestCaseNotFoundException.class,
+            EvalTaskNotFoundException.class})
+    public ResponseEntity<Result<Void>> handleNotFound(RuntimeException e) {
         return respond(ErrorCode.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidTestCaseException.class)
+    public ResponseEntity<Result<Void>> handleInvalidTestCase(InvalidTestCaseException e) {
+        return ResponseEntity.status(ErrorCode.INVALID_ARGUMENT.status())
+                .body(Result.fail(ErrorCode.INVALID_ARGUMENT.code(), e.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Result<Void>> handleIllegalArgument(IllegalArgumentException e) {
+        return respond(ErrorCode.INVALID_ARGUMENT, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

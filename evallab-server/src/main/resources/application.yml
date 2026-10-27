@@ -10,6 +10,8 @@ spring:
     password: ${EVALLAB_DB_PASSWORD}
   jackson:
     time-zone: Asia/Shanghai
+    # 全站 JSON 字段统一 snake_case，与 Trace 契约、数据库列名保持一致
+    property-naming-strategy: SNAKE_CASE
     serialization:
       # 时间统一输出 ISO 8601，不使用 yyyy-MM-dd HH:mm:ss 之类的自定义格式
       write-dates-as-timestamps: false
@@ -39,6 +41,17 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+evallab:
+  eval:
+    # 0.8：顺序不同(0.8)仍通过，缺任一步骤(≤0.75)即失败；归因见设计决策 D2
+    tool-correctness-threshold: 0.8
+  agent:
+    registry:
+      fault-injection-agent:
+        base-url: ${EVALLAB_FAULT_AGENT_URL:http://localhost:8081}
+        # 需大于 Agent 侧 TIMEOUT 故障的阻塞时长，否则拿不到 TIMEOUT 结果
+        timeout: ${EVALLAB_AGENT_TIMEOUT:90s}
 
 logging:
   level:
