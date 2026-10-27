@@ -127,7 +127,10 @@
       </el-table-column>
       <el-table-column label="Trace" width="180" show-overflow-tooltip>
         <template #default="{ row }">
-          <span class="mono muted">{{ row.trace_id || '—' }}</span>
+          <router-link v-if="row.trace_id" :to="`/trace/${row.trace_id}`" class="mono">
+            {{ row.trace_id.slice(0, 8) }}…
+          </router-link>
+          <span v-else class="muted">—</span>
         </template>
       </el-table-column>
     </el-table>

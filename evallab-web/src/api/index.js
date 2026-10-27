@@ -16,6 +16,10 @@ export const evalApi = {
   results: (id) => client.get(`/eval/task/${id}/result`)
 }
 
+export const traceApi = {
+  get: (traceId) => client.get(`/trace/${traceId}`)
+}
+
 export const baselineApi = {
   list: () => client.get('/baseline'),
   create: (body) => client.post('/baseline', body),
