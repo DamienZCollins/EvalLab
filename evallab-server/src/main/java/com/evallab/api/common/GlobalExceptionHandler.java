@@ -1,6 +1,7 @@
 package com.evallab.api.common;
 
 import com.evallab.core.eval.EvalTaskNotFoundException;
+import com.evallab.core.review.ManualReviewService;
 import com.evallab.core.testcase.InvalidTestCaseException;
 import com.evallab.core.testcase.TestCaseNotFoundException;
 import com.evallab.core.trace.InvalidTraceException;
@@ -40,8 +41,8 @@ public class GlobalExceptionHandler {
         return respond(ErrorCode.NOT_FOUND, e.getMessage());
     }
 
-    @ExceptionHandler(InvalidTestCaseException.class)
-    public ResponseEntity<Result<Void>> handleInvalidTestCase(InvalidTestCaseException e) {
+    @ExceptionHandler({InvalidTestCaseException.class, ManualReviewService.InvalidReviewException.class})
+    public ResponseEntity<Result<Void>> handleInvalidTestCase(RuntimeException e) {
         return ResponseEntity.status(ErrorCode.INVALID_ARGUMENT.status())
                 .body(Result.fail(ErrorCode.INVALID_ARGUMENT.code(), e.getMessage()));
     }

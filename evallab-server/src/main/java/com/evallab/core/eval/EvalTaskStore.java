@@ -21,6 +21,9 @@ public interface EvalTaskStore {
 
     List<EvalResult> findResults(long taskId);
 
+    /** 按结果 ID 查询；人工抽检按结果逐条比对时使用。 */
+    Optional<EvalResult> findResult(long resultId);
+
     /** 任务汇总指标，由执行结束时一次性写入。 */
     record TaskSummary(int passedCases, int failedCases, BigDecimal passRate,
                        BigDecimal avgScore, Long p95DurationMs) {

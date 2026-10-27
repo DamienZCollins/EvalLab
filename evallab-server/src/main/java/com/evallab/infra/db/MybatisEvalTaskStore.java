@@ -112,7 +112,8 @@ public class MybatisEvalTaskStore implements EvalTaskStore {
             score.setReason(record.reason());
             scoreMapper.insert(score);
         }
-        return findResult(entity.getResultId());
+        // 刚插入，必然存在
+        return findResult(entity.getResultId()).orElseThrow();
     }
 
     @Override
@@ -121,12 +122,16 @@ public class MybatisEvalTaskStore implements EvalTaskStore {
                         .eq(EvalResultEntity::getTaskId, taskId)
                         .orderByAsc(EvalResultEntity::getCreatedAt))
                 .stream()
-                .map(e -> findResult(e.getResultId()))
+                .map(e -> findResult(e.getResultId()).orElseThrow())
                 .toList();
     }
 
-    private EvalResult findResult(long resultId) {
+    @Override
+    public Optional<EvalResult> findResult(long resultId) {
         EvalResultEntity entity = resultMapper.selectById(resultId);
+        if (entity == null) {
+            return Optional.empty();
+        }
         List<ScoreRecord> scores = scoreMapper.selectList(Wrappers.<EvalScoreEntity>lambdaQuery()
                         .eq(EvalScoreEntity::getResultId, resultId)
                         .orderByAsc(EvalScoreEntity::getScoreId))
@@ -134,12 +139,12 @@ public class MybatisEvalTaskStore implements EvalTaskStore {
                 .map(s -> new ScoreRecord(ScorerType.valueOf(s.getScorerType()), s.getScoreName(),
                         s.getScore(), s.getThreshold(), s.getIsPassed(), s.getReason()))
                 .toList();
-        return new EvalResult(entity.getResultId(), entity.getTaskId(), entity.getTestcaseId(),
+        return Optional.of(new EvalResult(entity.getResultId(), entity.getTaskId(), entity.getTestcaseId(),
                 entity.getTestcaseVersion(), entity.getTraceId(),
                 "PASS".equals(entity.getStatus()), entity.getFailureReason(),
                 entity.getFailureCategory() == null ? null : FailureCategory.valueOf(entity.getFailureCategory()),
                 entity.getDurationMs() == null ? 0 : entity.getDurationMs(), entity.getAvgScore(),
-                toInstant(entity.getCreatedAt()), scores);
+                toInstant(entity.getCreatedAt()), scores));
     }
 
     private EvalTask toDomain(EvalTaskEntity entity) {
