@@ -47,7 +47,7 @@
 | `TIMEOUT` | 阻塞超过平台超时时间 | 数据/环境问题 |
 | `INPUT_MISUNDERSTAND` | 第一个 `LLM_CALL` 的计划与输入语义无关，调用无关工具 | 输入理解错误 |
 
-`target_span` 为目标工具调用的序号（从 0 开始的执行顺序），`null` 表示按类型默认位置。
+`target_span` 为目标工具调用的序号（从 0 开始的执行顺序，参考实现中 `0=web_search`、`1=extract`、`2=summarize`），`null` 表示按类型默认位置。序号越界或不是数字时 Agent 返回 HTTP 400，**不静默回落到第一个工具**——静默回落会让平台侧归因与预期故障对不上。
 
 ### 响应
 
@@ -124,10 +124,10 @@ HTTP 200，`Content-Type: application/json`，body 为完整 `TraceReport`（见
 | `trace_id` | 非空，≤64 字符，全局唯一 |
 | `agent_name` | 非空，≤128 字符 |
 | `status` | 非空 |
-| `spans` | 非空，≤1000 条 |
+| `spans` | 非空（至少 1 条），≤1000 条 |
 | `span_id` | 非空，同一 Trace 内唯一，≤64 字符 |
-| `parent_span_id` | 为空或指向同一 Trace 内存在的 `span_id`；不能指向自身；父子关系不能成环 |
-| `span_type` | 非空；`TOOL_CALL` 时 `tool_name` 必填 |
+| `parent_span_id` | ≤64 字符；为空或指向同一 Trace 内存在的 `span_id`；不能指向自身；父子关系不能成环 |
+| `span_type` | 非空；`TOOL_CALL` 时 `tool_name` 必填（≤128 字符） |
 | `start_time` / `end_time` | ISO 8601 带时区；`end_time` 不早于 `start_time` |
 | `tokens` / `duration_ms` | 缺省按 0 处理 |
 
