@@ -32,21 +32,22 @@
 
 ```text
 EvalLab/
-├── contract/        # 平台与 Agent 共用契约：Trace DTO、/execute 请求体，无框架依赖
-├── server/          # 后端服务
+├── backend/          # 后端服务
 │   └── src/main/
 │       ├── java/com/evallab/
 │       │   ├── api/         # REST 接口层：common / trace / testcase / eval / baseline / redteam / review
 │       │   ├── core/        # 核心领域：trace / testcase / scorer / attributor / eval / executor / baseline / redteam / review
 │       │   └── infra/       # 基础设施：db（MyBatis-Plus）/ agent（HTTP）/ llm（ChatClient）/ seed
 │       └── resources/       # 配置与 db/migration 迁移脚本
-├── agent-demo/      # 故障注入 Agent：5 类故障 + /admin/degrade 退化开关 + 输入侧提示注入过滤
-├── agent-websearch/ # Web 搜索 Agent：本地索引，搜索 → 抓取 → 总结，结果确定可复现
-├── cli/             # 回归门禁命令行，退出码 0/1/2，供 CI 使用
-├── web/             # 前端：用例管理 / 评测任务（归因饼图、Trace 树）/ 基线与门禁 / 红队评测 / 人工抽检
-├── docker/          # docker-compose.yml（mysql / server / agent / websearch-agent / web）+ 初始化脚本
-├── docs/            # 方案、开发路径、设计决策、Trace 契约、编码约定
-└── .env.example     # 服务端环境变量模板
+├── frontend/         # 前端：用例管理 / 评测任务（归因饼图、Trace 树）/ 基线与门禁 / 红队评测 / 人工抽检
+├── agents/           # 示例 Agent，共用 contract 契约
+│   ├── demo/         # 故障注入：5 类故障 + /admin/degrade 退化开关 + 输入侧提示注入过滤
+│   └── websearch/    # Web 搜索：本地索引，搜索 → 抓取 → 总结，结果确定可复现
+├── contract/         # 平台与 Agent 共用契约：Trace DTO、/execute 请求体，无框架依赖
+├── cli/              # 回归门禁命令行，退出码 0/1/2，供 CI 使用
+├── docker/           # docker-compose.yml（mysql / server / agent / websearch-agent / web）+ 初始化脚本
+├── docs/             # 方案、开发路径、设计决策、Trace 契约、编码约定
+└── .env.example      # 服务端环境变量模板
 ```
 
 ## 快速开始
@@ -105,17 +106,17 @@ docker compose -f docker/docker-compose.yml --env-file docker/.env down
    ```
 
    ```bash
-   java -jar server/target/server-0.1.0-SNAPSHOT.jar
+   java -jar backend/target/backend-0.1.0-SNAPSHOT.jar
    ```
 
    ```bash
-   java -jar agent-demo/target/fault-injection-agent.jar
+   java -jar agents/demo/target/fault-injection-agent.jar
    ```
 
 4. **启动前端**：
 
    ```bash
-   cd web && npm install && npm run dev
+   cd frontend && npm install && npm run dev
    ```
 
    Vite 开发服务器监听 `5173`，把 `/api` 代理到 `EVALLAB_SERVER_URL`（默认 `http://localhost:8080`）。
@@ -182,7 +183,7 @@ LLM 调用 / 工具调用分别着色，`error` 非空的节点整行标红并�
 搜索走本地 8 篇文档的索引（`LocalSearchIndex`），结果完全确定，适合做回归基线：
 
 ```bash
-java -jar agent-websearch/target/web-search-agent.jar   # 默认 8083
+java -jar agents/websearch/target/web-search-agent.jar   # 默认 8083
 ```
 
 输出固定为 `{"answer": "<首条结果标题>", "sources": <抓取篇数>, "steps": <工具调用数>}`。

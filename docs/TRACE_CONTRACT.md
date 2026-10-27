@@ -135,12 +135,12 @@ HTTP 200，`Content-Type: application/json`，body 为完整 `TraceReport`（见
 
 ## 5. 故障注入 Agent
 
-阶段 1 提供的参考实现，模块 `agent-demo`，构建产物 `fault-injection-agent.jar`。
+阶段 1 提供的参考实现，模块 `agents/demo`，构建产物 `fault-injection-agent.jar`。
 
 ### 运行
 
 ```bash
-java -jar agent-demo/target/fault-injection-agent.jar
+java -jar agents/demo/target/fault-injection-agent.jar
 ```
 
 | 环境变量 | 默认值 | 说明 |
